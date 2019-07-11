@@ -19,13 +19,10 @@ set "UNHIDE_BUSINESS=yes"
 set "CREATE_BUSINESS=yes"
 
 :: Add / remove launch parameters below if needed - it is preset for least amount of issues when doing upgrades
-set OPTIONS=/Telemetry Disable /MigrateDrivers all /ResizeRecoveryPartition disable /ShowOOBE none
+set OPTIONS=/Telemetry Disable /DynamicUpdate Enable /MigrateDrivers all /ResizeRecoveryPartition disable /ShowOOBE none
 
 :: Uncomment to force a specific Edition, Architecture and Language - if enabled, all 3 must be used
 rem set OPTIONS=%OPTIONS% /MediaEdition Enterprise /MediaArch x64 /MediaLangCode en-us
-
-:: Uncomment to disable dynamic update
-rem set OPTIONS=%OPTIONS% /DynamicUpdate Disable
 
 :: Uncomment to force Auto Upgrade - no user intervention needed
 rem set OPTIONS=%OPTIONS% /Eula Accept /MigChoice Upgrade /Auto Upgrade
