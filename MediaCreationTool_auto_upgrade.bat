@@ -1,4 +1,4 @@
-@echo off &title MediaCreationTool.bat by AveYo v2019.05.22  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
+@echo off &title MediaCreationTool.bat by AveYo v2019.07.11  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
 :: Universal MediaCreationTool wrapper for all "RedStone" Windows 10 MCT versions: 1607, 1703, 1709, 1803 and 1809
 :: Using as source nothing but microsoft-hosted original files for the current and past Windows 10 MCT releases
 :: Ingenious full support for business editions (Enterprise / VL) selecting language, x86, x64 or AIO inside MCT GUI
@@ -10,7 +10,7 @@
 :: - reinstated 1809 [RS5] with native xml patching of products.xml for MCT; added data loss warning for RS5
 :: - RS5 is officially back! And a greatly improved choices dialog - feel free to use the small snippet in your own scripts
 :: - added Auto Upgrade launch options preset with support for a setupcomplete.cmd in the current folder
-:: - 1903 [19H1] release
+:: - 1903 [19H1] release_svc_refresh
 
 :: Comment to not unhide combined business editions in products.xml that include them: 1709, 1803, 1809
 set "UNHIDE_BUSINESS=yes"
@@ -19,10 +19,13 @@ set "UNHIDE_BUSINESS=yes"
 set "CREATE_BUSINESS=yes"
 
 :: Add / remove launch parameters below if needed - it is preset for least amount of issues when doing upgrades
-set OPTIONS=/Telemetry Disable /DynamicUpdate Disable /MigrateDrivers all /ResizeRecoveryPartition disable /ShowOOBE none
+set OPTIONS=/Telemetry Disable /MigrateDrivers all /ResizeRecoveryPartition disable /ShowOOBE none
 
 :: Uncomment to force a specific Edition, Architecture and Language - if enabled, all 3 must be used
 rem set OPTIONS=%OPTIONS% /MediaEdition Enterprise /MediaArch x64 /MediaLangCode en-us
+
+:: Uncomment to disable dynamic update
+rem set OPTIONS=%OPTIONS% /DynamicUpdate Disable
 
 :: Uncomment to force Auto Upgrade - no user intervention needed
 set OPTIONS=%OPTIONS% /Eula Accept /MigChoice Upgrade /Auto Upgrade
@@ -43,8 +46,8 @@ goto version-RS%MCT_VERSION%
 
 :version-RS6
 set "V=1903"
-set "D=20190502"
-set "CAB=https://download.microsoft.com/download/5/8/4/584230EE-70C4-46D6-B992-FDAE62820615/products_20190502.cab"
+set "D=20190613"
+set "CAB=https://download.microsoft.com/download/0/0/6/00613FE0-E55C-456A-AC45-0DF96388400C/products_20190613.cab"
 set "MCT=https://software-download.microsoft.com/download/pr/MediaCreationTool1903.exe"
 goto process
 
