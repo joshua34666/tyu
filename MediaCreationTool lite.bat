@@ -1,4 +1,4 @@
-@echo off &title MediaCreationTool.bat by AveYo v2019.07.11  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
+@echo off &title MediaCreationTool.bat by AveYo v2019.09.29  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
 :: Universal MediaCreationTool wrapper for all "RedStone" Windows 10 MCT versions: 1607, 1703, 1709, 1803 and 1809
 :: Using as source nothing but microsoft-hosted original files for the current and past Windows 10 MCT releases
 :: Ingenious full support for business editions (Enterprise / VL) selecting language, x86, x64 or AIO inside MCT GUI
@@ -10,7 +10,8 @@
 :: - reinstated 1809 [RS5] with native xml patching of products.xml for MCT; added data loss warning for RS5
 :: - RS5 is officially back! And a greatly improved choices dialog - feel free to use the small snippet in your own scripts
 :: - added Auto Upgrade launch options preset with support for a setupcomplete.cmd in the current folder
-:: - 1903 [19H1] release_svc_refresh
+:: - UPDATED 19H1 build 18362.356 ; RS5 build 17763.379 and show build number
+:: - added LATEST MCT choice to dinamically download the current version (all others have hard-coded links)
 
 :: Comment to not unhide combined business editions in products.xml that include them: 1709, 1803, 1809
 set "UNHIDE_BUSINESS=yes"
@@ -19,10 +20,13 @@ set "UNHIDE_BUSINESS=yes"
 set "CREATE_BUSINESS=yes"
 
 :: Add / remove launch parameters below if needed - it is preset for least amount of issues when doing upgrades
-set OPTIONS=/Telemetry Disable /DynamicUpdate Enable /MigrateDrivers all /ResizeRecoveryPartition disable /ShowOOBE none
+set OPTIONS=/Telemetry Disable /MigrateDrivers all /ResizeRecoveryPartition disable /ShowOOBE none
 
 :: Uncomment to force a specific Edition, Architecture and Language - if enabled, all 3 must be used
 rem set OPTIONS=%OPTIONS% /MediaEdition Enterprise /MediaArch x64 /MediaLangCode en-us
+
+:: Uncomment to disable dynamic update
+rem set OPTIONS=%OPTIONS% /DynamicUpdate Disable
 
 :: Uncomment to force Auto Upgrade - no user intervention needed
 rem set OPTIONS=%OPTIONS% /Eula Accept /MigChoice Upgrade /Auto Upgrade
@@ -30,71 +34,85 @@ rem set OPTIONS=%OPTIONS% /Eula Accept /MigChoice Upgrade /Auto Upgrade
 :: Uncomment to show live mct console log for debugging
 rem set "OPTIONS=%OPTIONS% /Console /DiagnosticPrompt enable /NoReboot"
 
-:: Uncomment to bypass gui dialog choice and hardcode the target version: 1=1607, 2=1703, 3=1709, 4=1803, 5=1809
+:: Uncomment to bypass gui dialog choice and hardcode the target version: 1=1607, 2=1703, 3=1709, 4=1803, 5=1809, 6=1903, 7=LATEST
 rem set/a MCT_VERSION=6
 
 :: Available MCT versions
-set versions=  1607 [RS1], 1703 [RS2], 1709 [RS3], 1803 [RS4], 1809 [RS5], 1903 [19H1]
+set versions=  1607 [RS1], 1703 [RS2], 1709 [RS3], 1803 [RS4], 1809 [RS5], 1903 [19H1], LATEST MCT
 
 :: Show dialog w buttons: 1=outvar 2="choices" 3=selected [optional] 4="caption" 5=textsize 6=backcolor 7=textcolor 8=minsize
-if not defined MCT_VERSION call :choices MCT_VERSION "%versions%" 6 "Choose MCT Windows 10 Version:" 15 0xff180052 Snow 400
+if not defined MCT_VERSION call :choices MCT_VERSION "%versions%" 7 "Choose MCT Windows 10 Version:" 15 0xff180052 Snow 400
 if not defined MCT_VERSION echo No MCT_VERSION selected, exiting.. & timeout /t 5 & exit/b
-goto version-RS%MCT_VERSION%
+goto version-%MCT_VERSION%
 
-:version-RS6
+:version-7 - LATEST MCT
+set "V="
+set "B=LATEST AVAILABLE VIA MCT"
+set "D="
+set "CAB=https://go.microsoft.com/fwlink/?LinkId=841361"
+set "MCT=https://go.microsoft.com/fwlink/?LinkId=691209"
+goto process
+
+:version-6
 set "V=1903"
-set "D=20190613"
-set "CAB=https://download.microsoft.com/download/0/0/6/00613FE0-E55C-456A-AC45-0DF96388400C/products_20190613.cab"
+set "B=18362.356.190909-1636"
+set "D=_20190912"
+set "CAB=https://download.microsoft.com/download/4/e/4/4e491657-24c8-4b7d-a8c2-b7e4d28670db/products_20190912.cab"
 set "MCT=https://software-download.microsoft.com/download/pr/MediaCreationTool1903.exe"
 goto process
 
-:version-RS5
+:version-5
 set "V=1809"
-set "D=20181105"
-set "CAB=http://download.microsoft.com/download/B/6/E/B6E8893F-ECE0-42E5-A9ED-69A13DD0BA95/products_20181105.cab"
+set "B=17763.379.190312-0539"
+set "D=_20190314"
+set "CAB=https://download.microsoft.com/download/8/E/8/8E852CBF-0BCC-454E-BDF5-60443569617C/products_20190314.cab"
 set "MCT=http://software-download.microsoft.com/download/pr/MediaCreationTool1809.exe"
 goto process
 
-:version-RS4
+:version-4
 set "V=1803"
-set "D=20180705"
+set "B=17134.112.180619-1212"
+set "D=_20180705"
 set "CAB=http://download.microsoft.com/download/5/C/B/5CB83D2A-2D7E-4129-9AFE-353F8459AA8B/products_20180705.cab"
 set "MCT=http://software-download.microsoft.com/download/pr/MediaCreationTool1803.exe"
 goto process
 
-:version-RS3
+:version-3
 set "V=1709"
-set "D=20180105"
+set "B=16299.125.171213-1220"
+set "D=_20180105"
 set "CAB=http://download.microsoft.com/download/3/2/3/323D0F94-95D2-47DE-BB83-1D4AC3331190/products_20180105.cab"
 set "MCT=http://download.microsoft.com/download/A/B/E/ABEE70FE-7DE8-472A-8893-5F69947DE0B1/MediaCreationTool.exe"
 goto process
 
-:version-RS2
+:version-2
 set "V=1703"
-set "D=20170317"
+set "B=15063.0.170710-1358"
+set "D=_20170727" || note that only business editions are updated, while the consumer ones stay on 20170317 [TODO]
 set "CAB=http://download.microsoft.com/download/9/5/4/954415FD-D9D7-4E1F-8161-41B3A4E03D5E/products_20170317.cab"
 set "MCT=http://download.microsoft.com/download/1/C/4/1C41BC6B-F8AB-403B-B04E-C96ED6047488/MediaCreationTool.exe"
 :: 1703 MCT is also bugged so use 1607 instead
 set "MCT=http://download.microsoft.com/download/C/F/9/CF9862F9-3D22-4811-99E7-68CE3327DAE6/MediaCreationTool.exe"
 goto process
 
-:version-RS1
+:version-1
 set "V=1607"
-set "D=20170116"
+set "B=14393.0.161119-1705"
+set "D=_20170116"
 set "CAB=http://wscont.apps.microsoft.com/winstore/OSUpgradeNotification/MediaCreationTool/prod/Products_20170116.cab"
 set "MCT=http://download.microsoft.com/download/C/F/9/CF9862F9-3D22-4811-99E7-68CE3327DAE6/MediaCreationTool.exe"
 goto process
 
 :process
 echo.
-echo  Selected MediaCreationTool.exe for Windows 10 Version %V% - %D%
+echo  Selected MediaCreationTool.exe for Windows 10 Version %V% Build %B%
 echo.
 echo  "Windows 10" default MCT choice is usually combined consumer: Pro + Edu + Home
 echo  "Windows 10 Enterprise"  is usually combined business: Pro VL +  Edu VL +  Ent
 echo   RS1 and RS2 for business only come as individual idx: Pro VL or Edu VL or Ent
 echo.
 echo  If any issues, run script as Admin / check BITS service!
-echo  Please wait while preparing products_%D%.cab and MediaCreationTool%V%.exe ...
+echo  Please wait while preparing products%D%.cab and MediaCreationTool%V%.exe ...
 echo.
 bitsadmin.exe /reset /allusers >nul 2>nul
 net stop bits /y 2>nul
@@ -110,15 +128,16 @@ set "DOWNLOAD=(new-object System.Net.WebClient).DownloadFile"
 if not exist MediaCreationTool%V%.exe powershell -noprofile -c "%DOWNLOAD%('%MCT%','MediaCreationTool%V%.exe');"
 if not exist MediaCreationTool%V%.exe color 0e & echo Warning! missing MediaCreationTool%V%.exe
 :: download and expand CAB
-if defined CAB if not exist products_%D%.cab powershell -noprofile -c "%DOWNLOAD%('%CAB%','products_%D%.cab');"
-if defined CAB if not exist products_%D%.cab color 0e & echo Warning! cannot download products_%D%.cab & set "CAB="
-if defined CAB if exist products_%D%.cab expand.exe -R products_%D%.cab -F:* . >nul 2>nul
+if defined CAB if not exist products%D%.cab powershell -noprofile -c "%DOWNLOAD%('%CAB%','products%D%.cab');"
+if defined CAB if not exist products%D%.cab color 0e & echo Warning! cannot download products%D%.cab & set "CAB="
+if defined CAB if exist products%D%.cab expand.exe -R products%D%.cab -F:* . >nul 2>nul
+if defined CAB if exist products%D%.cab if not exist products.xml ren products%D%.cab products.xml
 :: download fallback XML
-if defined XML if not exist products_%D%.xml powershell -noprofile -c "%DOWNLOAD%('%XML%','products_%D%.xml');"
-if defined XML if not exist products_%D%.xml color 0e & echo Warning! cannot download products_%D%.xml & set "XML="
-if defined XML if not exist products.xml copy /y products_%D%.xml products.xml >nul 2>nul
+if defined XML if not exist products%D%.xml powershell -noprofile -c "%DOWNLOAD%('%XML%','products%D%.xml');"
+if defined XML if not exist products%D%.xml color 0e & echo Warning! cannot download products%D%.xml & set "XML="
+if defined XML if not exist products.xml copy /y products%D%.xml products.xml >nul 2>nul
 :: got products.xml?
-if not exist products.xml color 0c & echo Error! products_%D%.cab or products_%D%.xml are not available atm & pause & exit /b
+if not exist products.xml color 0c & echo Error! products%D%.cab or products%D%.xml are not available atm & pause & exit /b
 :: patch fallback XML for MCT
 if not defined CAT set "CAT=1.3"
 set "p1=[xml]$r=New-Object System.Xml.XmlDocument; $d=$r.CreateXmlDeclaration('1.0','UTF-8',$null); $null=$r.AppendChild($d);"
@@ -165,3 +184,4 @@ function Choices($outputvar,$choices,$sel=1,$caption='Choose',[byte]$sz=12,$bc='
 ::==============================================================================================================================
 :NOTICE: IF INTERESTED IN BUSINESS EDITIONS FOR 1607 AND 1703 TOO, GET THE FULL SCRIPT FROM THE LINKS AT THE TOP
 ::==============================================================================================================================
+#^_^#
