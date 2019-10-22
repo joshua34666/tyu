@@ -1,4 +1,4 @@
-@echo off &title MediaCreationTool.bat by AveYo v2019.09.29  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
+@echo off &title MediaCreationTool.bat by AveYo v2019.10.22  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
 :: Universal MediaCreationTool wrapper for all "RedStone" Windows 10 MCT versions: 1607, 1703, 1709, 1803 and 1809
 :: Using as source nothing but microsoft-hosted original files for the current and past Windows 10 MCT releases
 :: Ingenious full support for business editions (Enterprise / VL) selecting language, x86, x64 or AIO inside MCT GUI
@@ -12,6 +12,7 @@
 :: - added Auto Upgrade launch options preset with support for a setupcomplete.cmd in the current folder
 :: - UPDATED 19H1 build 18362.356 ; RS5 build 17763.379 and show build number
 :: - added LATEST MCT choice to dinamically download the current version (all others have hard-coded links)
+:: - 19H2 18363.418 as default choice
 
 :: Comment to not unhide combined business editions in products.xml that include them: 1709, 1803, 1809
 set "UNHIDE_BUSINESS=yes"
@@ -38,34 +39,43 @@ rem set "OPTIONS=%OPTIONS% /Console /DiagnosticPrompt enable /NoReboot"
 set/a MCT_VERSION=7
 
 :: Available MCT versions
-set versions=  1607 [RS1], 1703 [RS2], 1709 [RS3], 1803 [RS4], 1809 [RS5], 1903 [19H1], LATEST MCT
+set versions=  1607 [RS1], 1703 [RS2], 1709 [RS3], 1803 [RS4], 1809 [RS5], 1903 [19H1], 1909 [19H2], LATEST MCT
 
 :: Show dialog w buttons: 1=outvar 2="choices" 3=selected [optional] 4="caption" 5=textsize 6=backcolor 7=textcolor 8=minsize
 if not defined MCT_VERSION call :choices MCT_VERSION "%versions%" 7 "Choose MCT Windows 10 Version:" 15 0xff180052 Snow 400
 if not defined MCT_VERSION echo No MCT_VERSION selected, exiting.. & timeout /t 5 & exit/b
 goto version-%MCT_VERSION%
 
-:version-7 - LATEST MCT
+:version-8 - LATEST MCT
 set "V="
 set "B=LATEST AVAILABLE VIA MCT"
 set "D="
-set "CAB=https://go.microsoft.com/fwlink/?LinkId=841361"
-set "MCT=https://go.microsoft.com/fwlink/?LinkId=691209"
+set "CAB=http://go.microsoft.com/fwlink/?LinkId=841361"
+set "MCT=http://go.microsoft.com/fwlink/?LinkId=691209"
+goto process
+
+:version-7
+set "V=1909"
+set "B=18363.418.191007-0143"
+set "D=_20191007"
+set "CAT=1.3"
+set "CAB=http://download.microsoft.com/download/4/c/7/4c7a5beb-ca48-4fdd-a798-e48ccf022b79/products.cab"
+set "MCT=http://go.microsoft.com/fwlink/?LinkId=691209"
 goto process
 
 :version-6
 set "V=1903"
 set "B=18362.356.190909-1636"
 set "D=_20190912"
-set "CAB=https://download.microsoft.com/download/4/e/4/4e491657-24c8-4b7d-a8c2-b7e4d28670db/products_20190912.cab"
-set "MCT=https://software-download.microsoft.com/download/pr/MediaCreationTool1903.exe"
+set "CAB=http://download.microsoft.com/download/4/e/4/4e491657-24c8-4b7d-a8c2-b7e4d28670db/products_20190912.cab"
+set "MCT=http://software-download.microsoft.com/download/pr/MediaCreationTool1903.exe"
 goto process
 
 :version-5
 set "V=1809"
 set "B=17763.379.190312-0539"
 set "D=_20190314"
-set "CAB=https://download.microsoft.com/download/8/E/8/8E852CBF-0BCC-454E-BDF5-60443569617C/products_20190314.cab"
+set "CAB=http://download.microsoft.com/download/8/E/8/8E852CBF-0BCC-454E-BDF5-60443569617C/products_20190314.cab"
 set "MCT=http://software-download.microsoft.com/download/pr/MediaCreationTool1809.exe"
 goto process
 
@@ -138,6 +148,9 @@ if defined XML if not exist products%D%.xml color 0e & echo Warning! cannot down
 if defined XML if not exist products.xml copy /y products%D%.xml products.xml >nul 2>nul
 :: got products.xml?
 if not exist products.xml color 0c & echo Error! products%D%.cab or products%D%.xml are not available atm & pause & exit /b
+:: patch catalog version
+set "p0=$p.MCT.Catalogs.Catalog.version='%CAT%';"
+if defined CAT powershell -noprofile -c "[xml]$p = Get-Content './products.xml'; %p0%; $p.Save('./products.xml')"
 :: patch fallback XML for MCT
 if not defined CAT set "CAT=1.3"
 set "p1=[xml]$r=New-Object System.Xml.XmlDocument; $d=$r.CreateXmlDeclaration('1.0','UTF-8',$null); $null=$r.AppendChild($d);"
