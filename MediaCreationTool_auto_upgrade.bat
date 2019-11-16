@@ -1,6 +1,6 @@
-@echo off &title MediaCreationTool.bat by AveYo v2019.10.22  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
-:: Universal MediaCreationTool wrapper for all "RedStone" Windows 10 MCT versions: 1607, 1703, 1709, 1803 and 1809
-:: Using as source nothing but microsoft-hosted original files for the current and past Windows 10 MCT releases
+@echo off &title MediaCreationTool.bat by AveYo v2019.11.16  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
+:: Universal MediaCreationTool wrapper for all MCT Windows 10 versions from 1607 to 1909
+:: Using as source nothing but microsoft-hosted original files for the current and past MCT Windows 10 releases
 :: Ingenious full support for business editions (Enterprise / VL) selecting language, x86, x64 or AIO inside MCT GUI
 :: Changelog:
 :: - native xml patching so no editions spam: just combined client and combined business (individual business in 1607, 1703)
@@ -12,9 +12,9 @@
 :: - added Auto Upgrade launch options preset with support for a setupcomplete.cmd in the current folder
 :: - UPDATED 19H1 build 18362.356 ; RS5 build 17763.379 and show build number
 :: - added LATEST MCT choice to dinamically download the current version (all others have hard-coded links)
-:: - 19H2 18363.418 as default choice
+:: - 19H2 18363.418 as default choice (updated hard-coded links)
 
-:: Comment to not unhide combined business editions in products.xml that include them: 1709, 1803, 1809
+:: Comment to not unhide combined business editions in products.xml that include them: 1709+
 set "UNHIDE_BUSINESS=yes"
 
 :: Comment to not create individual business editions in products.xml that never included them: 1607, 1703
@@ -35,11 +35,11 @@ set OPTIONS=%OPTIONS% /Eula Accept /MigChoice Upgrade /Auto Upgrade
 :: Uncomment to show live mct console log for debugging
 rem set "OPTIONS=%OPTIONS% /Console /DiagnosticPrompt enable /NoReboot"
 
-:: Uncomment to bypass gui dialog choice and hardcode the target version: 1=1607, 2=1703, 3=1709, 4=1803, 5=1809, 6=1903, 7=LATEST
+:: Uncomment to bypass gui dialog choice and hardcode the version: 1=1607,2=1703,3=1709,4=1803,5=1809,6=1903,7=1909,8=LATEST
 set/a MCT_VERSION=7
 
 :: Available MCT versions
-set versions=  1607 [RS1], 1703 [RS2], 1709 [RS3], 1803 [RS4], 1809 [RS5], 1903 [19H1], 1909 [19H2], LATEST MCT
+set versions=  1607  [RS1], 1703  [RS2], 1709  [RS3], 1803  [RS4], 1809  [RS5], 1903 [19H1], 1909 [19H2], LATEST MCT
 
 :: Show dialog w buttons: 1=outvar 2="choices" 3=selected [optional] 4="caption" 5=textsize 6=backcolor 7=textcolor 8=minsize
 if not defined MCT_VERSION call :choices MCT_VERSION "%versions%" 7 "Choose MCT Windows 10 Version:" 15 0xff180052 Snow 400
@@ -57,10 +57,9 @@ goto process
 :version-7
 set "V=1909"
 set "B=18363.418.191007-0143"
-set "D=_20191007"
-set "CAT=1.3"
-set "CAB=http://download.microsoft.com/download/4/c/7/4c7a5beb-ca48-4fdd-a798-e48ccf022b79/products.cab"
-set "MCT=http://go.microsoft.com/fwlink/?LinkId=691209"
+set "D=_20191014"
+set "CAB=http://download.microsoft.com/download/1/7/5/175fceb0-34f3-425d-8bdf-c4bd72be5f29/products_20191014.cab"
+set "MCT=http://download.microsoft.com/download/c/0/b/c0b2b254-54f1-42de-bfe5-82effe499ee0/MediaCreationTool1909.exe"
 goto process
 
 :version-6
@@ -98,7 +97,7 @@ goto process
 :version-2
 set "V=1703"
 set "B=15063.0.170710-1358"
-set "D=_20170727" || note that only business editions are updated, while the consumer ones stay on 20170317 [TODO]
+set "D=_20170727" || note that only business editions are updated, while the consumer ones stay on 20170317
 set "CAB=http://download.microsoft.com/download/9/5/4/954415FD-D9D7-4E1F-8161-41B3A4E03D5E/products_20170317.cab"
 set "MCT=http://download.microsoft.com/download/1/C/4/1C41BC6B-F8AB-403B-B04E-C96ED6047488/MediaCreationTool.exe"
 :: 1703 MCT is also bugged so use 1607 instead
