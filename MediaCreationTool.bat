@@ -1,4 +1,4 @@
-@echo off &title MediaCreationTool.bat by AveYo v2019.11.16  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
+@echo off &title MediaCreationTool.bat by AveYo v2019.02.29  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
 :: Universal MediaCreationTool wrapper for all MCT Windows 10 versions from 1607 to 1909
 :: Using as source nothing but microsoft-hosted original files for the current and past MCT Windows 10 releases
 :: Ingenious full support for business editions (Enterprise / VL) selecting language, x86, x64 or AIO inside MCT GUI
@@ -12,7 +12,7 @@
 :: - added Auto Upgrade launch options preset with support for a setupcomplete.cmd in the current folder
 :: - UPDATED 19H1 build 18362.356 ; RS5 build 17763.379 and show build number
 :: - added LATEST MCT choice to dinamically download the current version (all others have hard-coded links)
-:: - 19H2 18363.418 as default choice (updated hard-coded links)
+:: - 19H2 18363.592 as default choice (updated hard-coded links)
 
 :: Comment to not unhide combined business editions in products.xml that include them: 1709+
 set "UNHIDE_BUSINESS=yes"
@@ -56,9 +56,9 @@ goto process
 
 :version-7
 set "V=1909"
-set "B=18363.418.191007-0143"
-set "D=_20191014"
-set "CAB=http://download.microsoft.com/download/1/7/5/175fceb0-34f3-425d-8bdf-c4bd72be5f29/products_20191014.cab"
+set "B=18363.592.200109-2016"
+set "D=_20200116"
+set "CAB=http://download.microsoft.com/download/8/2/b/82b12fa5-cab6-4d37-8167-16630c6151eb/products_20200116.cab"
 set "MCT=http://download.microsoft.com/download/c/0/b/c0b2b254-54f1-42de-bfe5-82effe499ee0/MediaCreationTool1909.exe"
 goto process
 
