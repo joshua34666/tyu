@@ -1,4 +1,4 @@
-@echo off &title MediaCreationTool.bat by AveYo v2019.02.29  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
+@echo off &title MediaCreationTool.bat by AveYo v2020.05.28  ||  pastebin.com/bBw0Avc4  or  git.io/MediaCreationTool.bat
 :: Universal MediaCreationTool wrapper for all MCT Windows 10 versions from 1607 to 1909
 :: Using as source nothing but microsoft-hosted original files for the current and past MCT Windows 10 releases
 :: Ingenious full support for business editions (Enterprise / VL) selecting language, x86, x64 or AIO inside MCT GUI
@@ -13,6 +13,7 @@
 :: - UPDATED 19H1 build 18362.356 ; RS5 build 17763.379 and show build number
 :: - added LATEST MCT choice to dinamically download the current version (all others have hard-coded links)
 :: - 19H2 18363.592 as default choice (updated hard-coded links)
+:: - 2004 19041.264 first release
 
 :: Comment to not unhide combined business editions in products.xml that include them: 1709+
 set "UNHIDE_BUSINESS=yes"
@@ -36,22 +37,30 @@ set OPTIONS=%OPTIONS% /Eula Accept /MigChoice Upgrade /Auto Upgrade
 rem set "OPTIONS=%OPTIONS% /Console /DiagnosticPrompt enable /NoReboot"
 
 :: Uncomment to bypass gui dialog choice and hardcode the version: 1=1607,2=1703,3=1709,4=1803,5=1809,6=1903,7=1909,8=LATEST
-set/a MCT_VERSION=7
+set/a MCT_VERSION=8
 
 :: Available MCT versions
-set versions=  1607  [RS1], 1703  [RS2], 1709  [RS3], 1803  [RS4], 1809  [RS5], 1903 [19H1], 1909 [19H2], LATEST MCT
+set versions=  1607, 1703, 1709, 1803, 1809, 1903, 1909, 2004, LATEST MCT
 
 :: Show dialog w buttons: 1=outvar 2="choices" 3=selected [optional] 4="caption" 5=textsize 6=backcolor 7=textcolor 8=minsize
-if not defined MCT_VERSION call :choices MCT_VERSION "%versions%" 7 "Choose MCT Windows 10 Version:" 15 0xff180052 Snow 400
+if not defined MCT_VERSION call :choices MCT_VERSION "%versions%" 8 "Choose MCT Windows 10 Version:" 15 0xff180052 Snow 400
 if not defined MCT_VERSION echo No MCT_VERSION selected, exiting.. & timeout /t 5 & exit/b
 goto version-%MCT_VERSION%
 
-:version-8 - LATEST MCT
+:version-9 - LATEST MCT
 set "V="
 set "B=LATEST AVAILABLE VIA MCT"
 set "D="
 set "CAB=http://go.microsoft.com/fwlink/?LinkId=841361"
 set "MCT=http://go.microsoft.com/fwlink/?LinkId=691209"
+goto process
+
+:version-8
+set "V=2004"
+set "B=19041.264.200511-0456"
+set "D=_20200514"
+set "CAB=http://download.microsoft.com/download/8/6/e/86e2d7b8-59b3-442b-8306-6697fc52b2bd/products_20200514.cab"
+set "MCT=http://software-download.microsoft.com/download/pr/MediaCreationTool2004.exe"
 goto process
 
 :version-7
