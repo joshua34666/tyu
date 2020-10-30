@@ -2,8 +2,8 @@
 :: Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 20H2!
 :: Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT!
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI!
-:: Changelog: 2020.10.29
-:: - script refactoring to accomodate all versions, clearer edition labels, new default options, ui facelift
+:: Changelog: 2020.10.30
+:: - script refactoring, clearer edition labels, new default options, ui facelift; hotfix utf-8, enterprise on 1909+
 :: - 2009: 19042.572 / 2004: 19041.508 / 1909: 18363.592 / 1903: 18362.356 / 1809: 17763.379 / 1803: 17134.112
 
 set CHOICES= 1507, 1511, 1607, 1703, 1709, 1803, 1809, 1903 (19H1), 1909 (19H2), 2004 (20H1), 2009 (20H2)
@@ -196,33 +196,35 @@ if %V% GTR 1511 (set "XP=MCT.Catalogs.Catalog.PublishedMedia") else set "XP=Publ
 set "XN='./products.xml'"
 
 :: apply Catalog version for MCT compatibility
-if defined CAB powershell -nop -c "[xml]$p=gc %XN%; $p.MCT.Catalogs.Catalog.version='%C%'; $p.Save(%XN%)"
+if defined CAB powershell -nop -c "[xml]$p=gc %XN% -enc UTF8; $p.MCT.Catalogs.Catalog.version='%C%'; $p.Save(%XN%)"
 :: insert Catalog version nodes if products link was .xml, not .cab: 1507, 1511, 1703
 set "@1= [xml]$r=New-Object System.Xml.XmlDocument; $d=$r.CreateXmlDeclaration('1.0','UTF-8',$null); $null=$r.AppendChild($d)"
 set "@2= $tmp=$r; foreach($n in @('MCT','Catalogs','Catalog')){$e=$r.CreateElement($n); $null=$tmp.AppendChild($e); $tmp=$e;}"
 set "@3= $h=$r.SelectNodes('/MCT/Catalogs/Catalog')[0]; $h.SetAttribute('version','%C%')"
-set "@4= [xml]$p=gc %XN%; $null=$h.AppendChild($r.ImportNode($p.PublishedMedia,$true)); $r.Save(%XN%)"
+set "@4= [xml]$p=gc %XN% -enc UTF8; $null=$h.AppendChild($r.ImportNode($p.PublishedMedia,$true)); $r.Save(%XN%)"
 if not defined CAB if %V% GTR 1511 powershell -nop -c "%@1%; %@2%; %@3%; %@4%"
 
 :: apply EULA url fix to prevent MCT timing out while downloading it - specially under naked Windows 7 host (likely TLS issue)
 set "EULA=http://download.microsoft.com/download/C/0/3/C036B882-9F99-4BC9-A4B5-69370C4E17E9/EULA_MCTool_"
 set "@1= foreach ($e in $p.%XP%.EULAS.EULA) {$e.URL='%EULA%'+$e.LanguageCode.ToUpper()+'_6.27.16.rtf'}"
-if %V% GTR 1507 powershell -nop -c "[xml]$p=gc %XN%; %@1%; $p.Save(%XN%)"
+if %V% GTR 1507 powershell -nop -c "[xml]$p=gc %XN% -enc UTF8; %@1%; $p.Save(%XN%)"
 :: insert EULA nodes in xml that do not include them: 1507
 set "@1= $t=[xml]('<EULAS><EULA><URL/><LanguageCode/></EULA></EULAS>'); $9=$r.AppendChild($p.ImportNode($t.EULAS,$true))"
 set "@2= foreach ($e in $r.Languages.Language){$c=$p.ImportNode($t.EULAS.EULA,$true);$lang=$e.LanguageCode;$c.LanguageCode=$lang"
 set "@3= $c.URL='%EULA%'+$lang.ToUpper()+'_6.27.16.rtf'; $null=$r.EULAS.AppendChild($c)}"
 set "@4= $d=$r.EULAS.SelectNodes('EULA') |? {($_.URL -eq '') -or ($_.LanguageCode -eq 'default')} |%% {$r.EULAS.RemoveChild($_)}"
-if not defined CAB if %V% EQU 1507 powershell -nop -c "[xml]$p=gc %XN%; $r=$p.%XP%; %@1%; %@2%; %@3%; %@4%; $p.Save(%XN%)"
+if not defined CAB if %V% EQU 1507 powershell -nop -c "[xml]$p=gc %XN% -enc UTF8; $r=$p.%XP%; %@1%;%@2%;%@3%;%@4%; $p.Save(%XN%)"
 
-:: unhide combined business editions in xml that include them: 1709 - 20H2; unhide Education on 1507 - 1511; add 'Consumer' label
-set "@1= if ($e.Edition -eq 'Enterprise') {$e.Edition_Loc='Windows 10 vl Enterprise | Pro | Edu'; $e.IsRetailOnly='False'}"
+:: unhide combined business editions in xml that include them: 1709 - 20H2; unhide Education on 1507 - 1511; better edition label
+set "@1= if ($e.Edition -eq 'Enterprise' -and $e.Architecture -ne 'ARM64')"
+set "@1= %@1% {$e.Edition_Loc='Windows 10 vl Enterprise | Pro | Edu'; $e.IsRetailOnly='False'}"
 if %V% EQU 1703 set "@1= if ($e.Edition -like '*Cloud*') {$e.IsRetailOnly='False'}"
 if %V% LEQ 1511 set "@1= if ($e.Edition -like '*Education*') {$e.IsRetailOnly='False'}"
 if %V% LEQ 1511 (set "CONSUMER=Home | Pro") else set "CONSUMER=Home | Pro | Edu"
 set "@2= if ($e.Edition_Loc -eq '%%CLIENT%%') {$e.Edition_Loc='Windows 10 %CONSUMER%'}"
 if %V% LEQ 1703 set "@2= %@2%; if ($e.Edition_Loc -eq '%%CLIENT_N%%') {$e.Edition_Loc='Windows 10 %CONSUMER% N'}"
-if %UNHIDE_BUSINESS%0 GEQ 1 powershell -nop -c "[xml]$p=gc %XN%; foreach ($e in $p.%XP%.Files.File) {%@1%; %@2%;}; $p.Save(%XN%)"
+set "@3= foreach ($e in $p.%XP%.Files.File) {%@1%; %@2%;}"
+if %UNHIDE_BUSINESS%0 GEQ 1 powershell -nop -c "[xml]$p=gc %XN% -enc UTF8; %@3%; $p.Save(%XN%)"
 :: insert individual business editions in xml that never included them: 1607, 1703
 if %INSERT_BUSINESS%0 GEQ 1 call :insert_business >nul 2>nul
 
@@ -249,12 +251,12 @@ exit/b DONE!
 :init script
 @echo off & title %1 & color 9f & mode 120,30
 :: self-echo top 2-18 lines of script
-<"%~f0" (set/p \=&for /l %%/ in (1,1,18) do set \=& set/p \=& call echo/%%\%%)
+<"%~f0" (set/p \=&for /l %%/ in (1,1,18) do set \=& set/p \=& call echo;%%\%%)
 :: lean xp+ color macros by AveYo:  %<%:af " hello "%>>%  &  %<%:cf " w\"or\"ld "%>%    for single \ / " use .%|%\  .%|%/  \"%|%\"
-for /f "delims=:" %%\ in ('echo/prompt $h$s$h:^|cmd/d') do set "|=%%\" &set ">>=\..\c nul &set/p \=%%\%%\%%\%%\%%\%%\%%\<nul&popd"
+for /f "delims=:" %%\ in ('echo;prompt $h$s$h:^|cmd/d') do set "|=%%\" &set ">>=\..\c nul &set/p \=%%\%%\%%\%%\%%\%%\%%\<nul&popd"
 set "<=pushd "%allusersprofile%"&2>nul findstr /c:\ /a" &set ">=%>>%&echo;" &set "|=%|:~0,1%" &set/p \=\<nul>"%allusersprofile%\c"
 :: generate a latest_MCT_script.url file for manual update - could have made the script to update itself, but decided against it
-for %%s in (latest_MCT_script.url) do if not exist %%s (echo/[InternetShortcut]& echo/URL=https://pastebin.com/bBw0Avc4)>%%s
+for %%s in (latest_MCT_script.url) do if not exist %%s (echo;[InternetShortcut]&echo;URL=https://git.io/MediaCreationTool.bat)>%%s
 :: use MCT workfolder
 pushd "%~dp0" & mkdir MCT >nul 2>nul & pushd MCT
 :: (un)define main variables
@@ -661,7 +663,7 @@ uN,x86,sv-se,d;19d90b982ec2d963667561718642d3dcf2497cd4,2130648134,d;ae6dd7d66db
 #: parameters specific to 1607 or 1703 expected via command line: $release $build $date $code
 $url = 'http://fg.ds.b1.download.windowsupdate.com/'
 $edi = @{e='Enterprise';eN='EnterpriseN';p='Professional';pN='ProfessionalN';u='Education';uN='EducationN'}
-[xml]$p = gc './products.xml'
+[xml]$p = gc './products.xml' -enc UTF8
 foreach ($e in @('e','eN','p','pN','u','uN')){
   $n = $e.Replace('e','p');
   [Object]$csve = $csv | Where-Object {$_.Edition -eq $e}
