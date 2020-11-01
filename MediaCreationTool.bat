@@ -2,8 +2,8 @@
 :: Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 20H2!
 :: Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT!
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI!
-:: Changelog: 2020.10.30
-:: - script refactoring, clearer edition labels, new default options, ui facelift; hotfix utf-8, enterprise on 1909+
+:: Changelog: 2020.11.01
+:: - script refactoring, clearer edition labels, new default options, hotfix utf-8, enterprise 1909+, fixed OPTIONS
 :: - 2009: 19042.572 / 2004: 19041.508 / 1909: 18363.592 / 1903: 18362.356 / 1809: 17763.379 / 1803: 17134.112
 
 set CHOICES= 1507, 1511, 1607, 1703, 1709, 1803, 1809, 1903 (19H1), 1909 (19H2), 2004 (20H1), 2009 (20H2)
@@ -163,10 +163,9 @@ goto process
 for /f "tokens=1,2 delims=." %%m in ("%B%") do set build=%%m.%%n
 %<%:f9 " Windows 10 Version "%>>%  &  %<%:5f " %V% "%>>%  &  %<%:f0 " %build% "%>>%  &  %<%:99 ~%>%
 echo;
-
 :: remove unsupported options in older versions
-if %V% LSS 1703 if /i "%OPTIONS:/DiagnosticPrompt enable=%" NEQ "%OPTIONS%" set OPTIONS=%OPTIONS:/DiagnosticPrompt enable=%
-if %V% LSS 1709 if /i "%OPTIONS:/Console=%" NEQ "%OPTIONS%" set OPTIONS=%OPTIONS:/Console=%
+if %V% LSS 1703 echo %OPTIONS% | findstr /c:"/DiagnosticPrompt enable" >nul && set "OPTIONS=%OPTIONS:/DiagnosticPrompt enable=%"
+if %V% LSS 1709 echo %OPTIONS% | findstr /c:"/Console" >nul && set "OPTIONS=%OPTIONS:/Console=%"
 
 :: cleanup workfolders
 (del /f /q products.* & rd /s/q %systemdrive%\$Windows.~WS %systemdrive%\$WINDOWS.~BT) 2>nul
@@ -234,7 +233,7 @@ makecab products.xml products.cab >nul
 :: handle auto upgrade scenario without user intervention when script was renamed to "auto MediaCreationTool.bat"
 set AUTO_OPTIONS=/Eula Accept /MigChoice Upgrade /Auto Upgrade /Action UpgradeNow
 for /f %%/ in ("%~n0") do if /i %%/ NEQ auto (set AUTO=) else set AUTO=1
-if defined AUTO if /i "%OPTIONS:Upgrade=%" EQU "%OPTIONS%" set OPTIONS=%OPTIONS% %AUTO_OPTIONS%
+if defined AUTO echo %OPTIONS% | findstr /c:"Upgrade" >nul && set "OPTIONS=%OPTIONS% %AUTO_OPTIONS%"
 
 :: import $OEM$ folder into generated media - for example $OEM$\$$\Setup\Scripts\setupcomplete.cmd gets executed once after setup
 set "OEM=%~dp0$OEM$" & set "SOURCES=%SystemDrive%\$Windows.~WS\Sources\Windows\sources\"
