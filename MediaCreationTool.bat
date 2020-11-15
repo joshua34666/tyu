@@ -2,10 +2,12 @@
 :: Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 20H2!
 :: Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT!
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI!
-:: Changelog: 2020.11.14
+:: Changelog: 2020.11.15 finally stable
+:: - one-time clear of cached MCT, as script generates proper 1.0 catalog for 1507,1511,1703 since last update
+:: - fixed compatibility with naked windows 7 powershell 2.0 / IPv6 / optional import $OEM$ / 1803+ business typo
 :: - generate latest links for 1909,2004; all xml editing now in one go; resolved known cannot run script issues
 :: - 2009: 19042.572 / 2004: 19041.572 / 1909: 18363.1139 / 1903: 18362.356 / 1809: 17763.379 / 1803: 17134.112
-:: - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 set CHOICES= 1507, 1511, 1607, 1703, 1709, 1803, 1809, 1903 [19H1], 1909 [19H2], 2004 [20H1], 2009 [20H2]
 
 :: comment to not unhide Enterprise for 1709+ in products.xml
@@ -31,8 +33,8 @@ set OPTIONS=%OPTIONS% /MigrateDrivers All /ResizeRecoveryPartition Disable /Show
 
 :: comment to enable default setup telemetry
 set OPTIONS=%OPTIONS% /Telemetry Disable
-:: - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+:: : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : :
 :: handle auto upgrade scenario without user intervention when script was renamed to "auto MediaCreationTool.bat"
 for /f %%s in ("%~n0") do if /i %%s EQU auto if not defined MCT_VERSION set MCT_VERSION=11
 
@@ -41,7 +43,7 @@ if not defined MCT_VERSION call :choices MCT_VERSION "%CHOICES%" 11 "Create Wind
 @goto version-%MCT_VERSION%
 
 :version-0
-%<%:e0 " NO MCT_VERSION SELECTED "%>% & timeout /t 5 >nul & exit/b
+%<%:e1 " NO MCT_VERSION SELECTED "%>% & timeout /t 5 >nul & exit/b
 
 :version-11
 set "V=2009" & set "B=19042.572.201009-1947.20h2_release_svc_refresh" & set "D=2020/10/" & set "C=1.4.1"
@@ -129,9 +131,9 @@ set "MCT=http://download.microsoft.com/download/C/F/9/CF9862F9-3D22-4811-99E7-68
 goto process
 
 :init script
-@echo off & title %1 & color 9f &rem mode 120,30
-:: self-echo top 2-18 lines of script
-<"%~f0" (set/p \=&for /l %%/ in (1,1,18) do set \=& set/p \=& call echo;%%\%%)
+@echo off & title %1 & color 1f & mode 120,30
+:: self-echo top 2-20 lines of script
+<"%~f0" (set/p \=&for /l %%/ in (1,1,20) do set \=& set/p \=& call echo;%%\%%)
 :: lean xp+ color macros by AveYo:  %<%:af " hello "%>>%  &  %<%:cf " w\"or\"ld "%>%    for single \ / " use .%|%\  .%|%/  \"%|%\"
 for /f "delims=:" %%\ in ('echo;prompt $h$s$h:^|cmd/d') do set "|=%%\" &set ">>=\..\c nul &set/p \=%%\%%\%%\%%\%%\%%\%%\<nul&popd"
 set "<=pushd "%allusersprofile%"&2>nul findstr /c:\ /a" &set ">=%>>%&echo;" &set "|=%|:~0,1%" &set/p \=\<nul>"%allusersprofile%\c"
@@ -156,29 +158,30 @@ function Choices ($outputvar,$choices,$sel=1,$caption='Choose',[byte]$sz=12,$bc=
  if ($global:rez -ne $ch.length) {exit $global:rez} else {exit 0} } :PS_CHOICES: gui choices returning index - snippet by AveYo
 
 :process selected
-%<%:f0 " Windows 10 Version "%>>%  &  %<%:af " %V% "%>>%  &  %<%:f9 " %B% "%>>%  &  %<%:99 ~%>% & echo;
+%<%:f0 " Windows 10 Version "%>>%  &  %<%:2f " %V% "%>>%  &  %<%:f1 " %B% "%>>%  &  %<%:11 ~%>% & echo;
 :: remove unsupported options in older versions
 if %V% LSS 1703 echo %OPTIONS% | findstr /c:"/DiagnosticPrompt enable" >nul && set "OPTIONS=%OPTIONS:/DiagnosticPrompt enable=%"
 if %V% LSS 1709 echo %OPTIONS% | findstr /c:"/Console" >nul && set "OPTIONS=%OPTIONS:/Console=%"
-:: cleanup workfolders
+:: cleanup workfolders; do one-time clear of cached MCT as script generates proper 1.0 catalog for 1507,1511,1703 since 2020.11.14
 (del /f /q products.* & rd /s/q %systemdrive%\$Windows.~WS %systemdrive%\$WINDOWS.~BT) 2>nul
+if not exist latest del /f /q *.exe 2>nul & cd.>latest
 
 :: download MCT and CAB / XML
 set "DOWN=function dl($u,$f){$w=new-object System.Net.WebClient; $w.Headers.Add('user-agent','ipad'); try{$w.DownloadFile($u,$f)}"
 set "LOAD=catch [System.Net.WebException] {write-host -non ';('; del $f -force -ea 0} finally{$w.Dispose()} } ; dl"
 if defined MCT echo;%MCT%
 if not exist MediaCreationTool%V%.exe powershell -nop -c "%DOWN% %LOAD% $env:MCT 'MediaCreationTool%V%.exe'" 2>nul
-if not exist MediaCreationTool%V%.exe %<%:96 " MediaCreationTool%V%.exe download failed "%>%
+if not exist MediaCreationTool%V%.exe %<%:1e " MediaCreationTool%V%.exe download failed "%>%
 if defined XML echo;%XML%
 if defined XML if not exist products%V%.xml powershell -nop -c "%DOWN% %LOAD% $env:XML 'products%V%.xml'" 2>nul
-if defined XML if not exist products%V%.xml %<%:90 " products%V%.xml download failed "%>%
+if defined XML if not exist products%V%.xml %<%:1e " products%V%.xml download failed "%>%
 if defined XML if exist products%V%.xml copy /y products%V%.xml products.xml >nul 2>nul
 if defined CAB echo;%CAB%
 if defined CAB if not exist products%V%.cab powershell -nop -c "%DOWN% %LOAD% $env:CAB 'products%V%.cab'" 2>nul
-if defined CAB if not exist products%V%.cab %<%:90 " products%V%.cab download failed "%>%
+if defined CAB if not exist products%V%.cab %<%:1e " products%V%.cab download failed "%>%
 if exist products%V%.cab expand.exe -R products%V%.cab -F:* . >nul 2>nul
 set success=1 &for %%s in (products.xml MediaCreationTool%V%.exe) do if not exist %%s set "success="
-echo; & if defined success ( %<%:1f " MCT starts after configuring products.xml, please wait..."%>% ) else (
+echo; & if defined success ( %<%:0f " MCT starts after configuring products.xml, please wait..."%>% ) else (
 %<%:4f " ERROR "%>>% & %<%:0f " Check urls in browser | del MCT dir | unblock powershell | enable BITS serv "%>% &pause &exit/b )
 
 :: configure products.xml - editing in one go
@@ -200,8 +203,8 @@ $eula = 'http://download.microsoft.com/download/C/0/3/C036B882-9F99-4BC9-A4B5-69
 if ($null -ne $root.EULAS) {
   foreach ($i in $root.EULAS.EULA) {$i.URL = $eula + $i.LanguageCode.ToUpper() + $rtf}
 } else {
-  $tmp = [xml]('<EULA><LanguageCode/><URL/></EULA>'); $el = $xml.CreateElement('EULAS'); $node = $xml.ImportNode($tmp.EULA,$true)
-  foreach ($lang in ($root.Languages.Language |where LanguageCode -ne 'default')) {
+$tmp = [xml]('<EULA><LanguageCode/><URL/></EULA>'); $el = $xml.CreateElement('EULAS'); $node = $xml.ImportNode($tmp.EULA,$true)
+  foreach ($lang in ($root.Languages.Language |where {$_.LanguageCode -ne 'default'})) {
     $i = $el.AppendChild($node.Clone()); $lc = $lang.LanguageCode; $i.LanguageCode = $lc; $i.URL = $eula + $lc.ToUpper() + $rtf
   }
   $null = $root.AppendChild($el)
@@ -211,7 +214,7 @@ if ($null -ne $root.EULAS) {
 if ($env:UNHIDE_BUSINESS -ge 1) {
   if ($ver -gt 1511) {$CONSUMER = 'Home | Pro | Edu'} else {$CONSUMER = 'Home | Pro'}
   foreach ($f in $root.Files.File) {
-    if ($e.Architecture -eq 'ARM64') {continue} ; $edi =  $f.Edition; $loc = $f.Edition_Loc
+    if ($f.Architecture -eq 'ARM64') {continue} ; $edi =  $f.Edition; $loc = $f.Edition_Loc
     if ($edi -eq 'Enterprise') {$f.IsRetailOnly = 'False'; $f.Edition_Loc = 'Windows 10 vl Enterprise | Pro | Edu'}
     if ($ver -le 1511 -and ($edi -eq 'Education' -or $edi -eq 'EducationN')) {$f.IsRetailOnly = 'False'}
     if ($ver -eq 1703 -and $edi -eq 'Cloud')  {$f.IsRetailOnly = 'False'; $f.Edition_Loc = 'Windows 10 S'}
@@ -222,9 +225,8 @@ if ($env:UNHIDE_BUSINESS -ge 1) {
 }
 
 ## insert individual business editions in xml that never included them: 1607, 1703
-$lines = ($f0-split':PS_UPDATE_BUSINESS_CSV\:')[1]
+$lines = ($f0-split':PS_UPDATE_BUSINESS_CSV\:')[1]; $url = 'http://ds.download.windowsupdate.com/'
 if ($null -ne $lines -and $env:UPDATE_BUSINESS -ge 1 -and 2004,1909,1703,1607,1511 -contains $ver) {
-  $url = 'http://wsus.ds.b1.download.windowsupdate.com/'
   $csv = ConvertFrom-CSV -Input $lines.replace('sr-rs','sr-latn-rs') |where {$_.Ver -eq $ver}
   $edi = @{ent='Enterprise';enN='EnterpriseN';edu='Education';edN='EducationN';pro='Professional';prN='ProfessionalN'}
   ## insert business entries for 1511, 1607, 1703
@@ -232,14 +234,14 @@ if ($null -ne $lines -and $env:UPDATE_BUSINESS -ge 1 -and 2004,1909,1703,1607,15
     $files = $root.Files.File |where {$_.Edition -eq "Education" -and $_.Architecture -ne 'ARM64'}
     foreach ($e in 'ent','enN','pro','prN','edu','edN') {
       $items = $csv |where {$_.Client -eq $e}  |group Lang -AsHashTable -AsString; if ($null -eq $items) {continue}
-      $upgr = '/upgr/'; if ($ver -eq 1607 -and $e -like 'en*') {$upgr = '/updt/'}
-      $cli = '_client' + $edi[$e].tolower(); if ($e -like 'p*') {$cli += 'vl'} ; $chan = '_vol_'
+      $up = '/upgr/'; if ($ver -eq 1607 -and $e -like 'en*') {$up = '/updt/'}
+      $cli = '_CLIENT' + $edi[$e].toupper(); if ($e -like 'p*') {$cli += 'VL_VOL_'} else {$cli += '_VOL_'}
       foreach ($f in $files) {
-        $lang = $f.LanguageCode; $item = $items[$lang]; if ($null -eq $item) {continue}
-        $arch = $f.Architecture; $size = $item."Size_$arch"; $sha1 = $item."Sha1_$arch"; $dir = $item."Dir_$arch"
+        $arch = $f.Architecture; $lang = $f.LanguageCode; $item = $items[$lang]; if ($null -eq $item) {continue}
+        $i = @(); "Size_$arch","Sha1_$arch","Dir_$arch" |foreach {$i += [string]($item |select -exp $_)}
         $c = $f.Clone(); $c.RemoveAttribute('id'); $c.IsRetailOnly = 'False'; $c.Edition = $edi[$e]
-        $c.Size = $size; $c.Sha1 = $sha1; $name = $env:B + $cli + $chan + $arch + 'fre_' + $lang
-        $c.FileName = $name + '.esd'; $c.FilePath = $url + $dir + $upgr + $env:D + $name + '_' + $sha1 + '.esd'
+        $name = $env:B + $cli + $arch + 'FRE_' + $lang; $c.Size = $i[0]; $c.Sha1 = $i[1]
+        $c.FileName = $name + '.esd'; $c.FilePath = $url + $i[2] + $up + $env:D + $name.tolower() + '_' + $i[1] + '.esd'
         $c.Edition_Loc = 'Windows 10 vl '+($edi[$e] -creplace 'N',' N'); $null = $root.Files.AppendChild($c)
       }
     }
@@ -249,14 +251,15 @@ if ($null -ne $lines -and $env:UPDATE_BUSINESS -ge 1 -and 2004,1909,1703,1607,15
     $items = $csv |group Client,Lang -AsHashTable -AsString
     foreach ($f in $root.Files.File) {
       if ($f.Architecture -eq 'ARM64' -or $f.Edition_Loc -eq '%BASE_CHINA%') {continue}
-      $cli = '_clientconsumer_'; $chan = 'ret'; if ($f.Edition -like 'Enterprise*') {$cli= '_clientbusiness_'; $chan = 'vol'}
-      $lang = $f.LanguageCode; $item = $items["$chan, $lang"]; if ($null -eq $item) {continue}
-      $arch = $f.Architecture; $sha1 = $item."Sha1_$arch"; $f.Sha1 = $sha1; $f.Size = $item."Size_$arch"
-      $name = $env:B + $cli + $chan + '_' + $arch + 'fre_' + $f.LanguageCode
-      $f.FileName = $name + '.esd'; $f.FilePath = $url + $item."Dir_$arch" + '/upgr/' + $env:D + $name + '_' + $sha1 + '.esd'
+      $cli = '_CLIENTCONSUMER_'; $chan = 'ret'; if ($f.Edition -like 'Enterprise*') {$cli= '_CLIENTBUSINESS_'; $chan = 'vol'}
+      $arch = $f.Architecture; $lang = $f.LanguageCode; $item = $items["$chan, $lang"]; if ($null -eq $item) {continue}
+      $i = @(); "Size_$arch","Sha1_$arch","Dir_$arch" |foreach {$i += [string]($item |select -exp $_)}
+      $name = $env:B + $cli + $chan.ToUpper() + '_' + $arch + 'FRE_' + $f.LanguageCode; $f.Size = $i[0]; $f.Sha1 = $i[1]
+      $f.FileName = $name + '.esd'; $f.FilePath = $url + $i[2] + '/upgr/' + $env:D + $name.tolower() + '_' + $i[1] + '.esd'
     }
   }
 }
+
 $xml.Save('./products.xml')
 :PRODUCTS_XML: edited!
 
@@ -268,17 +271,17 @@ set AUTO_OPTIONS=/Eula Accept /MigChoice Upgrade /Auto Upgrade /Action UpgradeNo
 for /f %%s in ("%~n0") do if /i %%s NEQ auto (set AUTO=) else set AUTO=1
 if defined AUTO echo %OPTIONS% | findstr /c:"Upgrade" >nul && set "OPTIONS=%OPTIONS% %AUTO_OPTIONS%"
 
-:: import $OEM$ folder into generated media - for example $OEM$\$$\Setup\Scripts\setupcomplete.cmd gets executed once after setup
-set "@1= $sources=$env:SystemDrive+'\$Windows.~WS\Sources\Windows\sources\'; $setup=$sources+'setupprep.exe';"
-set "@2= if (!($MCT)) {return}; if (!(Test-Path '..\$OEM$')) {return} ; do {"
-set "@3=  sleep 20; $r=gwmi -Class Win32_Process -Filter 'Name =''MediaCreationTool%V%.exe'''"
-set "@4= } until (($null -eq $r) -or ((Test-Path $setup) -eq $true)); $oem=[char]34+$sources+'$OEM$'+[char]34;"
-set "@5= if (Test-Path $setup) {mkdir $oem -force; xcopy /CYBERHIQ '..\$OEM$' $oem} ; return"
+:: [Dev] if present, import a $OEM$ folder into generated media - for example a $OEM$\$$\Setup\Scripts\setupcomplete.cmd
+set "\=<# this optional feature requires script to be [Run as administrator] #> $null=fltmc; if($LASTEXITCODE -gt 0) {return}"
+set "\=%\%; $f='Name=''MediaCreationTool%V%.exe'''; if (($null -eq $MCT) -or -not (Test-Path '..\$OEM$')) {return}"
+set "\=%\%; $sources=$env:SystemDrive+'\$Windows.~WS\Sources\Windows\sources\'; $setup=$sources+'setupprep.exe'"
+set "\=%\%; for (;;) {sleep 20; if(Test-Path $setup){break} ; if((gwmi -Class Win32_Process -Filter $f).ProcessId -le 0){break}}"
+set "\=%\%; if (Test-Path $setup) {xcopy /CYBERHIQ '..\$OEM$' ([char]34 + $sources + '$OEM$' + [char]34)} ; exit 0"
 
 :: finally launch MCT executable with local configuration and optional launch parameters
-powershell -win 1 -nop -c "$MCT=start MediaCreationTool%V%.exe -args $env:OPTIONS -passthru; %@1%; %@2%; %@3%; %@4%" 2>nul
+powershell -win 1 -nop -c "$MCT=start MediaCreationTool%V%.exe -args $env:OPTIONS -passthru; %\%" 2>nul
 
-exit/b DONE! AveYo: can skip some or all entries below if not interested in updating the esd links in products.xml
+exit || DONE! AveYo: can skip some or all entries below if not interested in updating the esd links in products.xml
 
 :: Insert business esd links in 1511,1607,1703; UPDATE 1909 and 2004 by hand until getting a products.xml url from microsoft
 :: Following are condensed ver,edition,lang,sizes,hashes,dirs to be recomposed into full official ESD links for MCT
