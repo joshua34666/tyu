@@ -56,7 +56,7 @@ goto process
 set "V=2004" & set "B=19041.508.200907-0256.vb_release_svc_refresh" & set "D=2020/09/" & set "C=1.4"
 if %UPDATE_BUSINESS%0 GEQ 1 set "B=19041.572.201009-1946.vb_release_svc_refresh" & set "D=2020/11/"
 set "CAB=http://download.microsoft.com/download/7/4/4/744ccd60-3203-4eea-bfa2-4d04e18a1552/products.cab"
-set "MCT=http://software-download.microsoft.com/download/pr/MediaCreationTool2004.exe"
+set "MCT=http://software-download.microsoft.com/download/pr/8d71966f-05fd-4d64-900b-f49135257fa5/MediaCreationTool2004.exe"
 :: visible improvements to windows update, defender, search, dx12, wsl, sandbox; pushing ChrEdge update intensifies
 goto process
 
@@ -71,7 +71,7 @@ goto process
 :version-8
 set "V=1903" & set "B=18362.356.190909-1636.19h1_release_svc_refresh" & set "D=2019/09/" & set "C=1.3"
 set "CAB=http://download.microsoft.com/download/4/e/4/4e491657-24c8-4b7d-a8c2-b7e4d28670db/products_20190912.cab"
-set "MCT=http://software-download.microsoft.com/download/pr/MediaCreationTool1903.exe"
+set "MCT=http://download.microsoft.com/download/9/8/8/9886d5ac-8d7c-4570-a3af-e887ce89cf65/MediaCreationTool1903.exe"
 :: modern windows 10 starts here with proper memory allocation, cpu scheduling, security features
 goto process
 
