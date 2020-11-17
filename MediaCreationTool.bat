@@ -2,8 +2,8 @@
 :: Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 20H2!
 :: Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT!
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI!
-:: Changelog: 2020.11.15 finally stable
-:: - one-time clear of cached MCT, as script generates proper 1.0 catalog for 1507,1511,1703 since last update
+:: Changelog: 2020.11.17
+:: - one-time clear of cached MCT, as script generates proper 1.0 catalog for 1507-1703; version from commandline
 :: - fixed compatibility with naked windows 7 powershell 2.0 / IPv6 / optional import $OEM$ / 1803+ business typo
 :: - generate latest links for 1909,2004; all xml editing now in one go; resolved known cannot run script issues
 :: - 2009: 19042.572 / 2004: 19041.572 / 1909: 18363.1139 / 1903: 18362.356 / 1809: 17763.379 / 1803: 17134.112
@@ -35,6 +35,9 @@ set OPTIONS=%OPTIONS% /MigrateDrivers All /ResizeRecoveryPartition Disable /Show
 set OPTIONS=%OPTIONS% /Telemetry Disable
 
 :: : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : :
+:: parse first commandline parameter as version, example: MediaCreationTool.bat 1909
+for %%V in (1.1507 2.1511 3.1607 4.1703 5.1709 6.1803 7.1809 8.1903 9.1909 10.2004 11.2009) do if %%~xV==.%1 set MCT_VERSION=%%~nV
+
 :: handle auto upgrade scenario without user intervention when script was renamed to "auto MediaCreationTool.bat"
 for /f %%s in ("%~n0") do if /i %%s EQU auto if not defined MCT_VERSION set MCT_VERSION=11
 
@@ -43,7 +46,7 @@ if not defined MCT_VERSION call :choices MCT_VERSION "%CHOICES%" 11 "Create Wind
 @goto version-%MCT_VERSION%
 
 :version-0
-%<%:e1 " NO MCT_VERSION SELECTED "%>% & timeout /t 5 >nul & exit/b
+%<%:e1 " NO MCT_VERSION SELECTED "%>% & popd & timeout /t 5 >nul & exit/b
 
 :version-11
 set "V=2009" & set "B=19042.572.201009-1947.20h2_release_svc_refresh" & set "D=2020/10/" & set "C=1.4.1"
