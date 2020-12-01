@@ -2,8 +2,8 @@
 :: Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 20H2!
 :: Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT!
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI!
-:: Changelog: 2020.11.17
-:: - one-time clear of cached MCT, as script generates proper 1.0 catalog for 1507-1703; version from commandline
+:: Changelog: 2020.12.01
+:: - attempt to fix reported issues with 1703; no other changes (skipping 19042.630 leaked esd because it is broken)
 :: - fixed compatibility with naked windows 7 powershell 2.0 / IPv6 / optional import $OEM$ / 1803+ business typo
 :: - generate latest links for 1909,2004; all xml editing now in one go; resolved known cannot run script issues
 :: - 2009: 19042.572 / 2004: 19041.572 / 1909: 18363.1139 / 1903: 18362.356 / 1809: 17763.379 / 1803: 17134.112
@@ -103,6 +103,8 @@ goto process
 set "V=1703" & set "B=15063.0.170710-1358.rs2_release_svc_refresh" & set "D=2017/07/" & set "C=1.0"
 set "XML=http://download.microsoft.com/download/2/E/B/2EBE3F9E-46F6-4DB8-9C84-659F7CCEDED1/products20170727.xml"
 set "MCT=http://download.microsoft.com/download/1/F/E/1FE453BE-89E0-4B6D-8FF8-35B8FA35EC3F/MediaCreationTool.exe"
+rem 1703 MCT works in all my tests, but some people are experiencing issues, so using 1607 MCT instead
+set "MCT=http://download.microsoft.com/download/C/F/9/CF9862F9-3D22-4811-99E7-68CE3327DAE6/MediaCreationTool.exe"
 :: some gamers still find it the best despite unfixed memory allocation bugs and exposed cpu flaws; can select Cloud (S)
 goto process
 
@@ -228,7 +230,7 @@ if ($env:UNHIDE_BUSINESS -ge 1) {
 }
 
 ## insert individual business editions in xml that never included them: 1607, 1703
-$lines = ($f0-split':PS_UPDATE_BUSINESS_CSV\:')[1]; $url = 'http://ds.download.windowsupdate.com/'
+$lines = ($f0-split':PS_UPDATE_BUSINESS_CSV\:')[1]; $url = 'http://wsus.ds.download.windowsupdate.com/'
 if ($null -ne $lines -and $env:UPDATE_BUSINESS -ge 1 -and 2004,1909,1703,1607,1511 -contains $ver) {
   $csv = ConvertFrom-CSV -Input $lines.replace('sr-rs','sr-latn-rs') |where {$_.Ver -eq $ver}
   $edi = @{ent='Enterprise';enN='EnterpriseN';edu='Education';edN='EducationN';pro='Professional';prN='ProfessionalN'}
