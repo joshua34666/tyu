@@ -2,11 +2,11 @@
 :: Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 20H2!
 :: Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT!
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI!
-:: Changelog: 2020.12.01
-:: - attempt to fix reported issues with 1703; no other changes (skipping 19042.630 leaked esd because it is broken)
+:: Changelog: 2020.12.11
+:: - updated 20H2; fixed pesky 1703 decryption bug on dual x86 + x64; improved cleanup; label includes version
 :: - fixed compatibility with naked windows 7 powershell 2.0 / IPv6 / optional import $OEM$ / 1803+ business typo
 :: - generate latest links for 1909,2004; all xml editing now in one go; resolved known cannot run script issues
-:: - 2009: 19042.572 / 2004: 19041.572 / 1909: 18363.1139 / 1903: 18362.356 / 1809: 17763.379 / 1803: 17134.112
+:: - 2009: 19042.631 / 2004: 19041.572 / 1909: 18363.1139 / 1903: 18362.356 / 1809: 17763.379 / 1803: 17134.112
 
 set CHOICES= 1507, 1511, 1607, 1703, 1709, 1803, 1809, 1903 [19H1], 1909 [19H2], 2004 [20H1], 2009 [20H2]
 
@@ -49,10 +49,10 @@ if not defined MCT_VERSION call :choices MCT_VERSION "%CHOICES%" 11 "Create Wind
 %<%:e1 " NO MCT_VERSION SELECTED "%>% & popd & timeout /t 5 >nul & exit/b
 
 :version-11
-set "V=2009" & set "B=19042.572.201009-1947.20h2_release_svc_refresh" & set "D=2020/10/" & set "C=1.4.1"
-set "CAB=http://download.microsoft.com/download/4/5/e/45eabe71-8b8f-487f-b591-314be20231d3/products_20201013.cab"
+set "V=2009" & set "B=19042.631.201119-0144.20h2_release_svc_refresh" & set "D=2020/11/" & set "C=1.4.1"
+set "CAB=http://download.microsoft.com/download/4/3/0/430e9adb-cf08-4b68-9032-eafca8378d42/products_20201119.cab"
 set "MCT=http://download.microsoft.com/download/4/c/c/4cc6c15c-75a5-4d1b-a3fe-140a5e09c9ff/MediaCreationTool20H2.exe"
-:: just a 2004 with an integrated enablement package to mainly bundle ChrEdge; bloats install.esd file above 4GB FAT32 limit!
+:: just a 2004 with an integrated enablement package to mainly bundle ChrEdge and bloat install.esd
 goto process
 
 :version-10
@@ -100,11 +100,12 @@ set "MCT=http://download.microsoft.com/download/A/B/E/ABEE70FE-7DE8-472A-8893-5F
 goto process
 
 :version-4
-set "V=1703" & set "B=15063.0.170710-1358.rs2_release_svc_refresh" & set "D=2017/07/" & set "C=1.0"
-set "XML=http://download.microsoft.com/download/2/E/B/2EBE3F9E-46F6-4DB8-9C84-659F7CCEDED1/products20170727.xml"
+set "V=1703" & set "B=15063.0.170317-1834.rs2_release" & set "D=2017/03/" & set "C=1.0"
+if %UPDATE_BUSINESS%0 GEQ 1 set "B=15063.0.170710-1358.rs2_release_svc_refresh" & set "D=2017/07/"
+rem set "XML=http://download.microsoft.com/download/2/E/B/2EBE3F9E-46F6-4DB8-9C84-659F7CCEDED1/products20170727.xml"
+rem above refreshed xml often fails decrypting dual x86 + x64 - using rtm instead; the added enterprise + cloud are refreshed
+set "CAB=http://download.microsoft.com/download/9/5/4/954415FD-D9D7-4E1F-8161-41B3A4E03D5E/products_20170317.cab"
 set "MCT=http://download.microsoft.com/download/1/F/E/1FE453BE-89E0-4B6D-8FF8-35B8FA35EC3F/MediaCreationTool.exe"
-rem 1703 MCT works in all my tests, but some people are experiencing issues, so using 1607 MCT instead
-set "MCT=http://download.microsoft.com/download/C/F/9/CF9862F9-3D22-4811-99E7-68CE3327DAE6/MediaCreationTool.exe"
 :: some gamers still find it the best despite unfixed memory allocation bugs and exposed cpu flaws; can select Cloud (S)
 goto process
 
@@ -167,9 +168,10 @@ function Choices ($outputvar,$choices,$sel=1,$caption='Choose',[byte]$sz=12,$bc=
 :: remove unsupported options in older versions
 if %V% LSS 1703 echo %OPTIONS% | findstr /c:"/DiagnosticPrompt enable" >nul && set "OPTIONS=%OPTIONS:/DiagnosticPrompt enable=%"
 if %V% LSS 1709 echo %OPTIONS% | findstr /c:"/Console" >nul && set "OPTIONS=%OPTIONS:/Console=%"
-:: cleanup workfolders; do one-time clear of cached MCT as script generates proper 1.0 catalog for 1507,1511,1703 since 2020.11.14
+:: cleanup workfolder
 (del /f /q products.* & rd /s/q %systemdrive%\$Windows.~WS %systemdrive%\$WINDOWS.~BT) 2>nul
-if not exist latest del /f /q *.exe 2>nul & cd.>latest
+set latest=0 & if exist latest set/p latest=<latest
+if %latest% LSS 20201211 del /f /q products*.* MediaCreationTool*.exe 2>nul & echo,20201211>latest
 
 :: download MCT and CAB / XML
 set "DOWN=function dl($u,$f){$w=new-object System.Net.WebClient; $w.Headers.Add('user-agent','ipad'); try{$w.DownloadFile($u,$f)}"
@@ -184,6 +186,7 @@ if defined XML if exist products%V%.xml copy /y products%V%.xml products.xml >nu
 if defined CAB echo;%CAB%
 if defined CAB if not exist products%V%.cab powershell -nop -c "%DOWN% %LOAD% $env:CAB 'products%V%.cab'" 2>nul
 if defined CAB if not exist products%V%.cab %<%:1e " products%V%.cab download failed "%>%
+if exist products%V%.cab del /f /q products%V%.xml 2>nul
 if exist products%V%.cab expand.exe -R products%V%.cab -F:* . >nul 2>nul
 set success=1 &for %%s in (products.xml MediaCreationTool%V%.exe) do if not exist %%s set "success="
 echo; & if defined success ( %<%:0f " MCT starts after configuring products.xml, please wait..."%>% ) else (
@@ -191,13 +194,13 @@ echo; & if defined success ( %<%:0f " MCT starts after configuring products.xml,
 
 :: configure products.xml - editing in one go
 set "0=%~f0" & powershell -nop -c $f0=[io.file]::ReadAllText($env:0);iex(($f0-split':PRODUCTS_XML\:.*')[1]) & goto :PRODUCTS_XML:
-[xml]$xml = [IO.File]::ReadAllText('./products.xml',[Text.Encoding]::UTF8); $root = $xml.SelectSingleNode('/PublishedMedia')
-$ver = $env:V
+[xml]$xml = [IO.File]::ReadAllText("$pwd\products.xml",[Text.Encoding]::UTF8)
+$ver = $env:V; if ($ver -eq 2009) {$vers = "20H2"} else {$vers = $ver}
 
 ## apply/insert Catalog version attribute for MCT compatibility
 if ($null -ne $xml.MCT) {
   $xml.MCT.Catalogs.Catalog.version = $env:C; $root = $xml.SelectSingleNode('/MCT/Catalogs/Catalog/PublishedMedia')
-} else {
+} else {  if ($ver -eq 1703) {$root = $xml.SelectSingleNode('/PublishedMedia');continue}
   $temp = [xml]('<?xml version="1.0" encoding="UTF-8"?><MCT><Catalogs><Catalog version="' + $env:C + '"/></Catalogs></MCT>')
   $null = $temp.SelectSingleNode('/MCT/Catalogs/Catalog').AppendChild($temp.ImportNode($xml.PublishedMedia,$true))
   $xml = $temp; $root = $xml.SelectSingleNode('/MCT/Catalogs/Catalog/PublishedMedia')
@@ -215,39 +218,48 @@ $tmp = [xml]('<EULA><LanguageCode/><URL/></EULA>'); $el = $xml.CreateElement('EU
   $null = $root.AppendChild($el)
 }
 
+## friendlier version + combined consumer editions label (not doing it for business too here as it would be ignored by mct)
+if ($null -ne $root.Languages) {
+  if ($ver -gt 1511) {$CONSUMER = "$vers Home | Pro | Edu"} else {$CONSUMER = "$vers Home | Pro"}
+  foreach ($i in $root.Languages.Language) {
+     foreach ($l in $i.ChildNodes) {$label = $i.$($l.LocalName); $i.$($l.LocalName) = $label.replace("Windows 10", "$vers")}
+     if ($null -ne $i.CLIENT)    {$i.CLIENT   = "$CONSUMER"}    ;  if ($null -ne $i.CLIENT_K)  {$i.CLIENT_K  = "$CONSUMER K"}
+     if ($null -ne $i.CLIENT_N)  {$i.CLIENT_N = "$CONSUMER N"}  ;  if ($null -ne $i.CLIENT_KN) {$i.CLIENT_KN = "$CONSUMER KN"}
+  }
+}
+
 ## unhide combined business editions in xml that include them: 1709 - 20H2; unhide Education on 1507 - 1511; better edition label
 if ($env:UNHIDE_BUSINESS -ge 1) {
   if ($ver -gt 1511) {$CONSUMER = 'Home | Pro | Edu'} else {$CONSUMER = 'Home | Pro'}
   foreach ($f in $root.Files.File) {
     if ($f.Architecture -eq 'ARM64') {continue} ; $edi =  $f.Edition; $loc = $f.Edition_Loc
-    if ($edi -eq 'Enterprise') {$f.IsRetailOnly = 'False'; $f.Edition_Loc = 'Windows 10 vl Enterprise | Pro | Edu'}
+    if ($edi -eq 'Enterprise') {$f.IsRetailOnly = 'False'; $f.Edition_Loc = "$vers Enterprise | Pro | Edu vl"}
     if ($ver -le 1511 -and ($edi -eq 'Education' -or $edi -eq 'EducationN')) {$f.IsRetailOnly = 'False'}
-    if ($ver -eq 1703 -and $edi -eq 'Cloud')  {$f.IsRetailOnly = 'False'; $f.Edition_Loc = 'Windows 10 S'}
-    if ($ver -eq 1703 -and $edi -eq 'CloudN') {$f.IsRetailOnly = 'False'; $f.Edition_Loc = 'Windows 10 SN'}
-    if ($ver -le 1703 -and $loc -eq '%CLIENT_N%') {$f.Edition_Loc = "Windows 10 $CONSUMER N"}
-    if ($loc -eq '%CLIENT%') {$f.Edition_Loc = "Windows 10 $CONSUMER"}
   }
 }
 
 ## insert individual business editions in xml that never included them: 1607, 1703
-$lines = ($f0-split':PS_UPDATE_BUSINESS_CSV\:')[1]; $url = 'http://wsus.ds.download.windowsupdate.com/'
+$lines = ($f0-split':PS_UPDATE_BUSINESS_CSV\:')[1]; $url = 'http://fg.ds.b1.download.windowsupdate.com/'
 if ($null -ne $lines -and $env:UPDATE_BUSINESS -ge 1 -and 2004,1909,1703,1607,1511 -contains $ver) {
   $csv = ConvertFrom-CSV -Input $lines.replace('sr-rs','sr-latn-rs') |where {$_.Ver -eq $ver}
-  $edi = @{ent='Enterprise';enN='EnterpriseN';edu='Education';edN='EducationN';pro='Professional';prN='ProfessionalN'}
-  ## insert business entries for 1511, 1607, 1703
+  $edi = @{ent='Enterprise';enN='EnterpriseN';pro='Professional';prN='ProfessionalN';edu='Education';edN='EducationN';
+           clo='Cloud';clN='CloudN'}
+  ## insert business entries for 1607, 1703
   if ($ver -le 1703) {
     $files = $root.Files.File |where {$_.Edition -eq "Education" -and $_.Architecture -ne 'ARM64'}
-    foreach ($e in 'ent','enN','pro','prN','edu','edN') {
+    foreach ($e in 'ent','enN','pro','prN','edu','edN','clo','clN') {
       $items = $csv |where {$_.Client -eq $e}  |group Lang -AsHashTable -AsString; if ($null -eq $items) {continue}
-      $up = '/upgr/'; if ($ver -eq 1607 -and $e -like 'en*') {$up = '/updt/'}
-      $cli = '_CLIENT' + $edi[$e].toupper(); if ($e -like 'p*') {$cli += 'VL_VOL_'} else {$cli += '_VOL_'}
+      $cli = '_CLIENT' + $edi[$e]; $up = '/upgr/'; if ($ver -eq 1607 -and $e -like 'en*') {$up = '/updt/'} #.toupper();
+      if ($e -like 'cl*') {$cli += '_RET_'} elseif ($e -like 'p*') {$cli += 'VL_VOL_'} else {$cli += '_VOL_'}
+      if ($e -like 'cl*') {$BUSINESS = $edi[$e] -replace 'Cloud','S'} else {$BUSINESS = $edi[$e] -creplace 'N',' N'}
       foreach ($f in $files) {
         $arch = $f.Architecture; $lang = $f.LanguageCode; $item = $items[$lang]; if ($null -eq $item) {continue}
         $i = @(); "Size_$arch","Sha1_$arch","Dir_$arch" |foreach {$i += [string]($item |select -exp $_)}
         $c = $f.Clone(); $c.RemoveAttribute('id'); $c.IsRetailOnly = 'False'; $c.Edition = $edi[$e]
         $name = $env:B + $cli + $arch + 'FRE_' + $lang; $c.Size = $i[0]; $c.Sha1 = $i[1]
         $c.FileName = $name + '.esd'; $c.FilePath = $url + $i[2] + $up + $env:D + $name.tolower() + '_' + $i[1] + '.esd'
-        $c.Edition_Loc = 'Windows 10 vl '+($edi[$e] -creplace 'N',' N'); $null = $root.Files.AppendChild($c)
+        $c.Edition_Loc = "$vers $BUSINESS"
+        $null = $root.Files.AppendChild($c)
       }
     }
   }
@@ -264,8 +276,7 @@ if ($null -ne $lines -and $env:UPDATE_BUSINESS -ge 1 -and 2004,1909,1703,1607,15
     }
   }
 }
-
-$xml.Save('./products.xml')
+$xml.Save("$pwd\products.xml")
 :PRODUCTS_XML: edited!
 
 :: repack XML into CAB
@@ -283,6 +294,9 @@ set "\=%\%; $sources=$env:SystemDrive+'\$Windows.~WS\Sources\Windows\sources\'; 
 set "\=%\%; for (;;) {sleep 20; if(Test-Path $setup){break} ; if((gwmi -Class Win32_Process -Filter $f).ProcessId -le 0){break}}"
 set "\=%\%; if (Test-Path $setup) {xcopy /CYBERHIQ '..\$OEM$' ([char]34 + $sources + '$OEM$' + [char]34)} ; exit 0"
 
+:: add a short delay to see the script output since the xml processing is too fast :D
+timeout 3 >nul
+
 :: finally launch MCT executable with local configuration and optional launch parameters
 powershell -win 1 -nop -c "$MCT=start MediaCreationTool%V%.exe -args $env:OPTIONS -passthru; %\%" 2>nul
 
@@ -291,7 +305,7 @@ exit || DONE! AveYo: can skip some or all entries below if not interested in upd
 :: Insert business esd links in 1511,1607,1703; UPDATE 1909 and 2004 by hand until getting a products.xml url from microsoft
 :: Following are condensed ver,edition,lang,sizes,hashes,dirs to be recomposed into full official ESD links for MCT
 :: I have chosen to generate them on-the-fly here instead of linking to third-party hosted pre-edited products.xml
-:: [Dev] ESD name has all except size; can get it with (Invoke-WebRequest -Uri 'url' -Method Head).Headers['Content-Length'])
+:: [Dev] ESD name has all except size; can get it with (Invoke-WebRequest -Uri $url -Method Head).Headers['Content-Length']
 :PS_UPDATE_BUSINESS_CSV:_,Ver,Client,Lang,Size_x64,Size_x86,Sha1_x64,Sha1_x86,Dir_x64,Dir_x86
 ::#,2004,ret,ar-sa,3424376474,2443826666,b318889964b75cef3a69ec75d28c7ef174157fac,34627c10a75e32440b8655fce3fa160b2561f81e,d,d
 ::#,2004,ret,bg-bg,3497891524,2461077962,89768c1292bb00d8bc59cc93a8bd31bf86fd0d60,b445575585fafced162431c8e491f35b20541083,c,d
@@ -445,6 +459,8 @@ exit || DONE! AveYo: can skip some or all entries below if not interested in upd
 ::#,1909,vol,uk-ua,3392754222,2413347222,2d69506768fdcea8dbba9db817f3061abf185147,b07a76669c2b2a7e90b0810d0c95f8719946392b,d,d
 ::#,1909,vol,zh-cn,3649266478,2647047456,47102873fd333e715f06c840e08a149963cfb6a4,8e1f607553ab7980c0c9ded018d8352b529320a4,d,d
 ::#,1909,vol,zh-tw,3629284727,2627531775,c4e3cea8745b894726133b81b9ad63c7344272b9,845b5ce812931b1cfcd665ee11b223549721bbee,d,c
+::#,1703,clo,en-us,3315033420,2546331272,7e8eae476222bbb48de04862a8ac85bdd563461c,9d92ec014d1dcc4d1968b33e9cc9bc0748e07bcd,d,d
+::#,1703,clN,en-us,3144657572,2437732564,e69925fec9aebc5fbf3852086ecb4c3fe00dfc2e,0fcc1248ab6ac55cae7ec24be5b21ff163d34fc1,c,c
 ::#,1703,enN,bg-bg,3063703618,2343397300,859fd1064516d2d86970313e20682c3f2da3b0f7,3f2d95b5af40290989b42d7e85fb73c2deecb107,c,c
 ::#,1703,enN,cs-cz,3063480034,2339478712,5885cef1a0a88972eafbf3240a91944a5bbaef0c,ebb7e9db690c146503c1470f6431ebb3b9f90b8d,d,d
 ::#,1703,enN,da-dk,3064590226,2359187156,049db05e06fc85f2e4fa47daf620a91219f94da7,bc154a20faed8cb135617ea5f7c804a78b041663,c,c
