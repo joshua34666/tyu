@@ -53,8 +53,10 @@ if defined ARCH     set MEDIA=1 & set OPTIONS=%OPTIONS% /MediaArch %ARCH%
 :: parse options to auto upgrade with less issues and prompts
 for %%a in (%~n0) do if /i %%a EQU auto set/a AUTO=1
 if defined AUTO if not defined VER set/a VER=12
-if defined AUTO set OPTIONS=%OPTIONS% /Eula Accept /MigChoice Upgrade /Auto Upgrade
-if defined MEDIA if not defined AUTO set OPTIONS=%OPTIONS% /Eula Accept /Action CreateMedia
+
+:: supress EULA prompt for auto upgrade or create media presets
+if defined MEDIA set OPTIONS=%OPTIONS% /Eula Accept
+if defined AUTO if not defined MEDIA set OPTIONS=%OPTIONS% /Eula Accept
 
 :: choices dialog
 if not defined VER call :choices VER "%CHOICES%" 12 "Create Windows 10 Media" 11 white dodgerblue 300
@@ -311,11 +313,12 @@ timeout 5 >nul
 if not defined AUTO if not defined PID if not exist ..\$OEM$\* start MediaCreationTool%V%.exe %OPTIONS% &exit/b
 
 :: generate auto.cmd for auto upgrade custom preset with less issues
+if defined AUTO set OPTIONS=%OPTIONS% /MigChoice Upgrade /Auto Upgrade
  >auto.cmd echo @set OPTIONS=%OPTIONS% /Action UpgradeNow
 >>auto.cmd echo @if exist "%%~dp0sources\setupprep.exe" start "w" "%%~dp0sources\setupprep.exe" %%OPTIONS%% ^&exit/b
 >>auto.cmd echo @if exist "%%~dp0x64\sources\setupprep.exe" start "w" "%%~dp0x64\sources\setupprep.exe" %%OPTIONS%% ^&exit/b
 >>auto.cmd echo @if exist "%%~dp0x86\sources\setupprep.exe" start "w" "%%~dp0x86\sources\setupprep.exe" %%OPTIONS%% ^&exit/b
-if defined AUTO set OPTIONS=%OPTIONS% /Action CreateUpgradeMedia
+if defined AUTO (set OPTIONS=%OPTIONS% /Action CreateUpgradeMedia) else if defined MEDIA set OPTIONS=%OPTIONS% /Action CreateMedia
 
 :: generate PID.txt if PID was supplied to select a specific edition with less prompts
 if not defined PID (del /f /q PID.txt 2>nul) else echo [PID]>PID.txt & for %%s in (%PID%) do echo Value=%%s >>PID.txt
