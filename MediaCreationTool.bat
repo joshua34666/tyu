@@ -2,7 +2,7 @@
 :: Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 21H1!
 :: Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT!
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI!
-:: Changelog: 2021.05.23 final
+:: Changelog: 2021.05.23 rev 1
 :: - 21H1 release; enhanced script name args parsing, upgrade from embedded, auto.cmd / PID.txt / $OEM$ import
 :: - 21H1: 19043.928 / 20H2: 19042.631 / 2004: 19041.572 / 1909: 18363.1139 / 1903: 18362.356 / 1809: 17763.379
 
@@ -212,8 +212,9 @@ exit/b
 
 :: show Auto-Upgrade (enhanced), Create-Media (enhanced) or Default (vanilla MCT) choice dialog
 if "%AUTO%%ISO%"=="" call :choices ACT "Default, Auto-Upgrade, Create-Media" 1 "%S% MediaCreationTool" 11 white dodgerblue 360
-if %ACT%0==10 (set ACTION=Default) else if %ACT%0==20 (set ACTION=Auto-Upgrade) else if %ACT%0==30 (set ACTION=Create-Media)
-if %ACT%0==10 (set DEFAULT=1) else if %ACT%0==20 (set AUTO=1) else if %ACT%0==30 (set ISO=1) else (set MCT=& goto begin)
+if "%AUTO%%ISO%"=="" if %ACT%0==10 (set DEFAULT=1) else if %ACT%0==20 (set AUTO=1) else if %ACT%0==30 (set ISO=1) 
+if "%AUTO%%ISO%"=="" if %ACT%0 lss 10 set MCT=& goto begin 
+if defined AUTO (set ACTION=Auto-Upgrade) else if defined ISO (set ACTION=Create-Media) else (set ACTION=Default)
 
 :: detect current os_arch, os_langcode, os_edition, os_product, os_ver
 set OS_ARCH=x64& if "%PROCESSOR_ARCHITECTURE:~-2%"=="86" if not defined PROCESSOR_ARCHITEW6432 set OS_ARCH=x86
@@ -241,9 +242,12 @@ set MEDIA=& for %%s in (%LANGCODE%%EDITION%%ARCH%%KEY%) do (set MEDIA=%%s)
 if defined MEDIA if not defined LANGCODE set LANGCODE=%OS_LANGCODE%
 if defined MEDIA if not defined EDITION set EDITION=%OS_EDITION%
 if defined MEDIA if not defined ARCH set ARCH=%OS_ARCH%
-if defined MEDIA for %%s in (%EDITION%) do (set EDITION=%%s& set OS_EDITION=%%s& set OPTIONS=%OPTIONS% /MediaEdition %%s)
-if defined MEDIA for %%s in (%LANGCODE%) do (set LANGCODE=%%s& set OS_LANGCODE=%%s& set OPTIONS=%OPTIONS% /MediaLangCode %%s)
-if defined MEDIA for %%s in (%ARCH%) do (set ARCH=%%s& set OS_ARCH=%%s& set OPTIONS=%OPTIONS% /MediaArch %%s)
+
+:: OPTIONS /MediaEdition /MediaLangCode /MediaArch are not supported in MCT versions before 1709
+if defined MEDIA for %%s in (%EDITION%)  do (set OS_EDITION=%%s&  if %V% geq 1709 set OPTIONS=%OPTIONS% /MediaEdition %%s)
+if defined MEDIA for %%s in (%LANGCODE%) do (set OS_LANGCODE=%%s& if %V% geq 1709 set OPTIONS=%OPTIONS% /MediaLangCode %%s)
+if defined MEDIA for %%s in (%ARCH%)     do (set OS_ARCH=%%s&     if %V% geq 1709 set OPTIONS=%OPTIONS% /MediaArch %%s)
+if %V% lss 1709 (set KEY=)
 
 :: show label
 %<%:f0 " Windows 10 Version "%>>%  &  %<%:2f " %S% "%>>%  &  %<%:f1 " %B% "%>>%
@@ -283,7 +287,7 @@ $ver = $env:V; $vers = $env:S; ${\\}='ht'+'tp://' # baffling pastebin url filter
 ## apply/insert Catalog version attribute for MCT compatibility
 if ($null -ne $xml.MCT) {
   $xml.MCT.Catalogs.Catalog.version = $env:C; $root = $xml.SelectSingleNode('/MCT/Catalogs/Catalog/PublishedMedia')
-} else {  if ($ver -eq 1703) {$root = $xml.SelectSingleNode('/PublishedMedia');continue}
+} else {  if ($ver -eq 1703 -and $env:XML) {$root = $xml.SelectSingleNode('/PublishedMedia');continue}
   $temp = [xml]('<?xml version="1.0" encoding="UTF-8"?><MCT><Catalogs><Catalog version="' + $env:C + '"/></Catalogs></MCT>')
   $null = $temp.SelectSingleNode('/MCT/Catalogs/Catalog').AppendChild($temp.ImportNode($xml.PublishedMedia,$true))
   $xml = $temp; $root = $xml.SelectSingleNode('/MCT/Catalogs/Catalog/PublishedMedia')
@@ -384,7 +388,7 @@ if not defined KEY (del /f /q PID.txt 2>nul) else >PID.txt echo [PID]& for %%s i
 :: generate ISO\auto.cmd for auto upgrade 2nd stage - more reliably pass OPTIONS via setupprep
  >auto.cmd echo @echo off ^& rem MediaCreationTool.bat: auto upgrade Windows 10 with troubleshooting options and less prompts 
 >>auto.cmd echo;
->>auto.cmd echo set OPTIONS=/Eula Accept /MigChoice Upgrade /Auto Upgrade /Action UpgradeNow %OPTIONS%
+>>auto.cmd echo set OPTIONS=%OPTIONS% /Eula Accept /MigChoice Upgrade /Auto Upgrade /Action UpgradeNow
 >>auto.cmd echo;
 >>auto.cmd echo set F=^&for %%%%i in ("%%~dp0x86\" "%%~dp0x64\" "%%~dp0") do if exist "%%%%~isources\setupprep.exe" set "F=%%%%~i"
 >>auto.cmd echo if not defined F echo [ERROR] ISO sources folder not found ^& timeout -1 ^&exit/b
@@ -409,8 +413,8 @@ if not defined KEY (del /f /q PID.txt 2>nul) else >PID.txt echo [PID]& for %%s i
 >>auto.cmd echo start "w" "%%F%%sources\setupprep.exe" %%OPTIONS%%
 
 :: pass auto upgrade 1st stage or create media as MCT setup action and set the working folder
-if 1%AUTO% gtr 10 set OPTIONS=/Eula Accept /Action CreateUpgradeMedia %OPTIONS% & set ISO=%SystemDrive%\ESD\Windows 
-if 1%AUTO% leq 10 set OPTIONS=/Eula Accept /Action CreateMedia %OPTIONS% & set ISO=%SystemDrive%\$Windows.~WS\Sources\Windows
+if 1%AUTO% gtr 10 set OPTIONS=%OPTIONS% /Eula Accept /Action CreateUpgradeMedia &set "ISO=%SystemDrive%\ESD\Windows"
+if 1%AUTO% leq 10 set OPTIONS=%OPTIONS% /Eula Accept /Action CreateMedia &set "ISO=%SystemDrive%\$Windows.~WS\Sources\Windows"
 
 :: finally, run MCT with OPTIONS, wait for sources folder creation, then import auto.cmd and/or PID.txt and/or $OEM$
 set "run=%~dp0MCT\run"
