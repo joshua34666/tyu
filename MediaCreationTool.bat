@@ -2,7 +2,7 @@
 :: Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 21H1!
 :: Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT!
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI!
-:: Changelog: 2021.07.06 - final rc   
+:: Changelog: 2021.08.01 - create-iso fix for 1507-1703
 :: - create iso directly; enhanced dialogs; args from script name or commandline; older MCT quirks ironed out!
 :: - 21H1: 19043.928 / 20H2: 19042.631 / 2004: 19041.572 / 1909: 18363.1139 / 1903: 18362.356 / 1809: 17763.379
 
@@ -92,6 +92,7 @@ if defined NO_UPDATE (set UPDATE=/DynamicUpdate Disable) else (set UPDATE=/Dynam
 
 :: parse NO_UNDO from script name or commandline - dont create Windows.old undo data on upgrade [faster but less reliable] 
 for %%/ in (%~n0 %*) do if /i %%/ equ no_undo set "NO_UNDO=1"
+if defined NO_UNDO (set UNDO=/Uninstall Disable) else (set UNDO=/Uninstall Enable)
 
 :: parse NO_OEM from script name or commandline - dont include $OEM$\ subfolder and auto.cmd in the created media
 for %%/ in (%~n0 %*) do if /i %%/ equ no_oem set "NO_OEM=1"
@@ -225,7 +226,7 @@ for %%s in (latest_MCT_script.url) do if not exist %%s (echo;[InternetShortcut]&
 :: baffling pastebin url filters..
 for %%s in (tp://) do set "\\=ht%%s"
 :: (un)define main variables
-for %%v in (NO_UPDATE NO_OEM ACT AUTO CREATE ISO DEFAULT EDITION KEY ARCH LANGCODE VID MCT XML CAB EXE) do set "%%v="
+for %%v in (NO_UPDATE NO_UNDO NO_OEM ACT AUTO CREATE ISO DEFAULT EDITION KEY ARCH LANGCODE VID MCT XML CAB EXE) do set "%%v="
 set OPTIONS=/Selfhost& exit/b
 :process
 
@@ -322,8 +323,8 @@ if "Select in MCT" equ "%ACTION%" (start MediaCreationTool%VER%.exe %OPTIONS%& E
 
 set OPTIONS=%OPTIONS% /Eula Accept /SkipSummary& set "LABEL=%VID%" & set "DIR=%SystemDrive%\ESD\Windows"
 for %%s in (%EDITION% %LANGCODE% %ARCH%) do call set "LABEL=%%LABEL%% %%s"
-(if %OS_VERSION% geq 2600 set "NO_UNDO=") & rem if %VER% gtr 1703 set OPTIONS=%OPTIONS% /Priority High
-set ACTION=/Action CreateUpgradeMedia /UpdateMedia Accept %UPDATE% %NO_UNDO% /MediaPath %SystemDrive%\ESD\Windows
+(if %OS_VERSION% geq 2600 set "UNDO=") & (if %OS_VERSION% lss 1709 set "UNDO=")
+set ACTION=/Action CreateUpgradeMedia %UPDATE% %UNDO% /MediaPath %SystemDrive%\ESD\Windows
 
 :: not using /MediaEdition setup option in MCT version 1703 and older - handled via products.xml
 if defined MEDIA for %%s in (%EDITION%)  do if %VER% gtr 1703 (set OPTIONS=%OPTIONS% /MediaEdition %%s)
@@ -367,7 +368,7 @@ rem >>auto.cmd echo;if "%%BuildNumber%%" gtr "2600" if /i "%%EditionID%%" neq "E
 >>auto.cmd echo;)) ^>nul 2^>nul
 >>auto.cmd echo;
 >>auto.cmd echo;:upgrade
->>auto.cmd echo;start "auto" setupprep.exe %OPTIONS% %UPDATE% %NO_UNDO% /MigChoice Upgrade /Auto Upgrade
+>>auto.cmd echo;start "auto" setupprep.exe %OPTIONS% %UPDATE% %UNDO% /MigChoice Upgrade /Auto Upgrade
 
 :: run MCT /Action CreateUpgradeMedia with edition, then include auto.cmd / PID.txt / $OEM$ and start auto.cmd (if needed)
 set "mct=%__cd__:'=''%mct.ps1"
