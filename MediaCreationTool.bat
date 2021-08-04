@@ -2,7 +2,7 @@
 :: Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 21H1!
 :: Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT!
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI!
-:: Changelog: 2021.08.01 - create-iso fix for 1507-1703
+:: Changelog: 2021.08.04 done fiddling
 :: - create iso directly; enhanced dialogs; args from script name or commandline; older MCT quirks ironed out!
 :: - 21H1: 19043.928 / 20H2: 19042.631 / 2004: 19041.572 / 1909: 18363.1139 / 1903: 18362.356 / 1809: 17763.379
 
@@ -252,15 +252,17 @@ if defined EDITION (set MEDIA_EDITION=%EDITION%) else (set MEDIA_EDITION=%OS_EDI
 if defined LANGCODE (set MEDIA_LANGCODE=%LANGCODE%) else (set MEDIA_LANGCODE=%OS_LANGCODE%)
 if defined ARCH (set MEDIA_ARCH=%ARCH%) else (set MEDIA_ARCH=%OS_ARCH%)
 
-:: edition fallback per MCT support
-set MEDIA_EDITION=%MEDIA_EDITION:Embedded=Enterprise%& set MEDIA_EDITION=%MEDIA_EDITION:EnterpriseS=Enterprise%& rem
-rem if defined CREATE (set MEDIA_EDITION=%MEDIA_EDITION:ProfessionalWorkstation=Enterprise%)
-rem if defined CREATE (set MEDIA_EDITION=%MEDIA_EDITION:ProfessionalEducation=Education%)
-if %VER% leq 1709 (set MEDIA_EDITION=%MEDIA_EDITION:ProfessionalWorkstation=Professional%)
-if %VER% leq 1709 (set MEDIA_EDITION=%MEDIA_EDITION:ProfessionalEducation=Professional%)
+:: edition fallback per MCT support and script choices - finally corrected
+(set MEDIA_EDITION=%MEDIA_EDITION:Embedded=Enterprise%)
+(set MEDIA_EDITION=%MEDIA_EDITION:EnterpriseS=Enterprise%)
+if defined CREATE (set MEDIA_EDITION=%MEDIA_EDITION:ProfessionalWorkstation=Enterprise%)
+if defined CREATE (set MEDIA_EDITION=%MEDIA_EDITION:ProfessionalEducation=Education%)
+if %VER% leq 1709 (set MEDIA_EDITION=%MEDIA_EDITION:ProfessionalWorkstation=Enterprise%)
+if %VER% leq 1709 (set MEDIA_EDITION=%MEDIA_EDITION:ProfessionalEducation=Education%)
 if %VER% leq 1511 (set MEDIA_EDITION=%MEDIA_EDITION:Enterprise=Professional%)
 if %VER% leq 1703 if %INSERT_BUSINESS%0 lss 1 (set MEDIA_EDITION=%MEDIA_EDITION:Enterprise=Professional%)
 if %VER% leq 1511 if %UNHIDE_BUSINESS%0 lss 1 (set MEDIA_EDITION=%MEDIA_EDITION:Education=Professional%)
+if not defined EDITION if "%MEDIA_EDITION%" neq "%OS_EDITION%" set "EDITION=%MEDIA_EDITION%"
 
 :: generic key preset - only staged editions in MCT install.esd - see sources\product.ini
 for %%/ in (%MEDIA_EDITION%) do for %%K in ( 
@@ -338,7 +340,7 @@ if not defined KEY (del /f /q PID.txt 2>nul) else (echo;[PID]& echo;Value=%KEY%&
 :: generate auto.cmd for auto upgrade 2nd stage - more reliably pass OPTIONS via setupprep and workaround to keep files and apps
  >auto.cmd echo;@echo off ^& title MediaCreationTool.bat: auto upgrade Windows 10 directly with suitable options
 >>auto.cmd echo;
->>auto.cmd echo;set "MediaBuildNumber=%VER%" ^& set "MediaEdition=%EDITION%" ^& set "dir=" ^& pushd "%%~dp0"
+>>auto.cmd echo;set "MediaBuild=%VER%" ^& set "MediaEdition=%EDITION%" ^& set "dir=" ^& pushd "%%~dp0"
 >>auto.cmd echo;for %%%%i in ("x86\" "x64\" "") do if exist "%%%%~isources\setupprep.exe" set "dir=%%%%~i"
 >>auto.cmd echo;pushd "%%dir%%sources" ^|^| (pause ^& exit/b)
 >>auto.cmd echo;set MediaEdition ^|^| goto upgrade
@@ -348,13 +350,11 @@ if not defined KEY (del /f /q PID.txt 2>nul) else (echo;[PID]& echo;Value=%KEY%&
 >>auto.cmd echo;set CV32="HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion"
 >>auto.cmd echo;for /f "tokens=2*" %%%%R in ('reg query %%CV64%% /v EditionID   2^^^>nul') do set "EditionID=%%%%S"
 >>auto.cmd echo;for /f "tokens=2*" %%%%R in ('reg query %%CV64%% /v ProductName 2^^^>nul') do set "ProductName=%%%%S"
->>auto.cmd echo;for /f "tokens=2*" %%%%R in ('reg query %%CV64%% /v CurrentBuildNumber 2^^^>nul') do set "BuildNumber=%%%%S"
->>auto.cmd echo;for %%%%/ in (1507.10240 1511.10586 1607.14393 1703.15063 1709.16299 1803.17134 1809.17763 1903.18362 1909.18363
->>auto.cmd echo;2004.19041 2009.19042 2104.19043) do if .%%Version%% equ %%%%~x/ set/a Version=%%%%~n/
->>auto.cmd echo;if "%%BuildNumber%%" gtr "2600" goto upgrade
-rem >>auto.cmd echo;if "%%BuildNumber%%" gtr "2600" if /i "%%EditionID%%" neq "Embedded" goto upgrade
->>auto.cmd echo;if "%%BuildNumber%%" gtr "%%MediaBuildNumber%%" if "%%MediaBuildNumber%%" lss "2004" goto upgrade 
+>>auto.cmd echo;for /f "tokens=2*" %%%%R in ('reg query %%CV64%% /v CurrentBuildNumber 2^^^>nul') do set "Build=%%%%S"
 >>auto.cmd echo;if /i "%%EditionID%%" equ "%%MediaEdition%%" goto upgrade
+>>auto.cmd echo;if /i "%%EditionID%%" neq "Embedded" if "%%Build%%" gtr "1909" if "%%MediaBuild%%" gtr "1909" goto upgrade 
+>>auto.cmd echo;if /i "%%EditionID%%" neq "Embedded" if "%%Build%%" gtr "2600" goto upgrade
+>>auto.cmd echo;if /i "%%EditionID%%" equ "Embedded" set "MediaEdition=Enterprise"
 >>auto.cmd echo;fltmc^>nul ^|^| (echo EditionID=%%EditionID%% [MISMATCH] - Run as administrator to bypass ^& timeout /t 10)
 >>auto.cmd echo;
 >>auto.cmd echo;:: cross-edition in-place / upgrade workaround to keep files and apps - 20H1/20H2/21H1 also supports downgrade
