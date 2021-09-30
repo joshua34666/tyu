@@ -2,7 +2,7 @@
 ::# Universal MCT wrapper script by AveYo - for all Windows 10 versions from 1507 to 21H2!
 ::# Nothing but Microsoft-hosted source links and no third-party tools - script just configures a xml and starts MCT
 ::# Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI
-::# Changelog: 2021.09.25 Windows 11
+::# Changelog: 2021.09.25 Windows 11 ; 2021.09.30 fix Auto Setup preset not launching
 ::# - improved script reliability; create iso directly; enhanced dialogs; args from script name or commandline 
 ::# - 11: 22000.132 / 21H2: 19044.1165 / 21H1: 19043.928 / 20H2: 19042.1052 / 2004: 19041.572 / 1909: 18363.1139
 
@@ -437,8 +437,8 @@ EXIT/B ALL DONE
  switch ($PRESET) {
    'Auto Setup' {
     #:: pasively wait MCT to author sources, then add $OEM$, PID.txt, auto.cmd (disable with NO_OEM) and launch auto.cmd setuprep
-     OEMFiles; MCTCompatUndo; start -win $hide -wait cmd '/d/x/rcall auto.cmd %DIR%'
      $MCT = start -wait "MediaCreationTool$VID.exe" $OPTIONS; if (-not (test-path $DIR)) {break}
+     OEMFiles; MCTCompatUndo; start -win $hide -wait cmd '/d/x/rcall auto.cmd %DIR%'
      break
    }
    'Create ISO' {
@@ -1277,4 +1277,3 @@ function :PRODUCTS_XML { [xml]$xml = [IO.File]::ReadAllText("$pwd\products.xml",
 ::#,22000,vol,uk-ua,3453971472,,d1b457622d20ca3edd9708e126881a7d78246d74,,c,
 ::#,22000,vol,zh-cn,3723366348,,923f912bdfd9374d9890fea8e0fa76a57d3db524,,c,
 ::#,22000,vol,zh-tw,3683258981,,d3bd7de86e3ab27a57910faf919f240c35aca807,,d,
-
